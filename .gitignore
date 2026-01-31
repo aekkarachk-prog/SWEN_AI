@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+npm-debug.log
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Mac/Windows system files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build
