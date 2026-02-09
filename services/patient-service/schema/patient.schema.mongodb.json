@@ -1,0 +1,13 @@
+{
+    "collection": "patients",
+    "fields": {
+      "patient_code": "String (unique)",
+      "first_name": "String",
+      "last_name": "String",
+      "gender": "String",
+      "birth_date": "Date",
+      "is_deleted": "Boolean",
+      "created_at": "Date",
+      "updated_at": "Date"
+    }
+  }
