@@ -1,31 +1,15 @@
 {
-  "name": "alzheimer-frontend",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
-    "axios": "^1.5.0",
-    "react-router-dom": "^6.16.0",
-    "chart.js": "^4.4.0",
-    "react-chartjs-2": "^5.2.0",
-    "tailwindcss": "^3.3.3"
-  },
+  "name": "patient-service",
+  "version": "1.0.0",
+  "main": "server.js",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "mongoose": "^7.5.0",
+    "dotenv": "^16.3.1"
   }
 }
