@@ -4,12 +4,12 @@ services:
   # 1. Frontend (Next.js)
   frontend:
     build: 
-      context: ./services/frontend
+      context: ./frontend
     container_name: alzheimer-frontend
     restart: unless-stopped
     # ผูก Volume เพื่อให้แก้โค้ดที่เครื่องเรา แล้วเว็บอัปเดตทันทีโดยไม่ต้อง Build ใหม่
     volumes:
-      - ./services/frontend:/app
+      - ./frontend:/app
       - /app/node_modules
     networks:
       - app-network
@@ -48,7 +48,7 @@ services:
     ports:
       - "80:80"  # เปิด Port 80 ให้เครื่องเราเข้าถึงได้
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - frontend
       - backend-core
