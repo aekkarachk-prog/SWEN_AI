@@ -1,16 +1,19 @@
 // ไฟล์: services/backend-core/server.js
 const express = require('express');
 const cors = require('cors');
+
+// 1. ดึง Route ที่เพื่อนเขียนไว้มาใช้งาน
+const diagnosisRoutes = require('./src/routes/diagnosis');
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// แบ่ง Route ตามงาน (ให้เพื่อนแยกกันไปเขียนใน Folder ตัวเอง)
-// app.use('/api/auth', require('./src/auth/routes'));
-// app.use('/api/patients', require('./src/patients/routes'));
-// app.use('/api/history', require('./src/history/routes'));
+// 2. เชื่อม Route เข้ากับ Path ของระบบ
+app.use('/api/diagnosis', diagnosisRoutes);
 
+// หน้าแรกเอาไว้เช็ค Health
 app.get('/', (req, res) => {
   res.json({ message: "Backend Core is running!" });
 });
