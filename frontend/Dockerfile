@@ -1,17 +1,20 @@
-# ใช้ Node.js เพื่อรัน Dev Server (แก้โค้ดแล้วเปลี่ยนทันที)
-FROM node:18-alpine
+# ใช้ Node.js เวอร์ชัน 20 (Alpine เพื่อให้ขนาดไฟล์เล็ก)
+FROM node:20-alpine
 
+# ตั้งค่า Working Directory ภายใน Container
 WORKDIR /app
 
-# Copy ไฟล์ Config มาลง Library
+# ก๊อปปี้ไฟล์ package.json มาก่อนเพื่อติดตั้ง dependencies
 COPY package*.json ./
+
+# ติดตั้งแพ็กเกจ
 RUN npm install
 
-# Copy โค้ดทั้งหมด
+# ก๊อปปี้โค้ดทั้งหมดเข้ามาใน Container
 COPY . .
 
-# เปิด Port 3000 (เพื่อให้ Gateway มองเห็น)
+# เปิด Port 3000
 EXPOSE 3000
 
-# สั่งรัน React ในโหมดพัฒนา
-CMD ["npm", "start"]
+# รันโหมด Development (เพื่อให้รองรับ Hot-Reload ที่ตั้งไว้ใน Nginx)
+CMD ["npm", "run", "dev"]
