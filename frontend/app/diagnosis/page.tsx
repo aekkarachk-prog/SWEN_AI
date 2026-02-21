@@ -37,6 +37,7 @@ export default function DiagnosisPage() {
       });
       const data = await response.json();
       setResult(data);
+      setLoading(false);
     } catch (error) {
       console.error("Error analyzing:", error);
       // Mock ข้อมูลกรณี API ยังไม่เชื่อมต่อ
@@ -56,7 +57,7 @@ export default function DiagnosisPage() {
       <aside className="w-64 bg-white border-r flex flex-col shadow-sm">
         <div className="p-6">
           <h1 className="text-xl font-bold text-blue-600 flex items-center gap-2">
-            <Stethoscope size={24} /> Dr. Bigboss
+            <Stethoscope size={24} /> Dr. Bigboss สุดหล่อ
           </h1>
         </div>
         

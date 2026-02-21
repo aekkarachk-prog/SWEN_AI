@@ -24,7 +24,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     // ส่งไฟล์ไปให้ ai-service ที่พอร์ต 5000 (ชื่อโฮสต์ 'ai-service' มาจาก Docker network)
     // ถ้าคุณรันแยกโดยไม่ใช้ Docker ให้เปลี่ยน 'ai-service' เป็น 'localhost'
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:5000/predict';
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://svc-ai:5000/predict';
     
     console.log('Forwarding image to AI Service...');
     

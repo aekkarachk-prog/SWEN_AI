@@ -1,7 +1,8 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* โค้ดที่เหลือปล่อยไว้เหมือนเดิม */
 :root {
   --background: #f8fafc;
   --foreground: #334155;

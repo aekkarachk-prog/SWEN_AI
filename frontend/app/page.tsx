@@ -6,6 +6,7 @@ import {
   User, Lock, LogOut, Stethoscope, History, FlaskConical,
   Bed, Activity, ShieldCheck, Hospital, LayoutDashboard, Key
 } from 'lucide-react';
+import Link from 'next/link';
 
 // --- Types ---
 type Role = 'DOCTOR' | 'NURSE';
@@ -258,7 +259,9 @@ export default function LoginPage() {
                         <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
                         <MenuButton icon={<Activity />} title="ดูผล Lab (Laboratory)" desc="ตรวจสอบผลการตรวจทางห้องปฏิบัติการ" color="blue" />
                         {/* เพิ่มเมนูวิเคราะห์อัลไซเมอร์ให้หมอ */}
-                        <MenuButton icon={<Stethoscope />} title="วิเคราะห์อัลไซเมอร์" desc="AI ช่วยวิเคราะห์ภาพสแกนสมอง" color="blue" />
+                        <Link href="/diagnosis" className="block w-full">
+                          <MenuButton icon={<Stethoscope />} title="วิเคราะห์อัลไซเมอร์" desc="AI ช่วยวิเคราะห์ภาพสแกนสมอง" color="blue" />
+                        </Link>
                       </>
                     ) : (
                       <>

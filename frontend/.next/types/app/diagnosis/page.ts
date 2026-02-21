@@ -1,4 +1,4 @@
-// File: C:\663380276-2(C)\Software Engineering for Artificial Intelligence\alzheimer-system\services\frontend\app\diagnosis\page.tsx
+// File: /app/app/diagnosis/page.tsx
 import * as entry from '../../../../app/diagnosis/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
