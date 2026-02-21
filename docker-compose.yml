@@ -1,53 +1,61 @@
+version: '3.8'
+
 services:
-  # 1. API Gateway
-  alz-gateway:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      # แก้ path ตรงนี้ให้ชี้ไปที่ folder infra/
-      - ./infra/nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - frontend
-      - backend-core
-
-  # 2. Frontend (React)
+  # 1. Frontend (Next.js)
   frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
+    build: 
+      context: ./services/frontend
+    container_name: alzheimer-frontend
+    restart: unless-stopped
+    # ผูก Volume เพื่อให้แก้โค้ดที่เครื่องเรา แล้วเว็บอัปเดตทันทีโดยไม่ต้อง Build ใหม่
     volumes:
-      - ./frontend:/app
+      - ./services/frontend:/app
       - /app/node_modules
+    networks:
+      - app-network
 
-  # 3. Backend Core (ยุบรวม 5 Services)
+  # 2. Backend API Gateway (Node.js)
   backend-core:
-    build: ./services/backend-core
-    ports:
-      - "3001:3000" # (เปิด 3001 ไว้เผื่ออยากยิง Postman เทสต์ตรงๆ)
+    build: 
+      context: ./services/backend-core
+    container_name: alzheimer-backend
+    restart: unless-stopped
     volumes:
       - ./services/backend-core:/app
       - /app/node_modules
     environment:
-      - MONGO_URI=mongodb://alz-mongo:27017/alzheimer_db
-    depends_on:
-      - alz-mongo
+      - PORT=3000
+      - AI_SERVICE_URL=http://ai-service:5000/predict
+    networks:
+      - app-network
 
-  # 4. AI Service (Python)
-  svc-ai:
-    build: ./services/ai-service
-    ports:
-      - "5000:5000"
+  # 3. AI Service (Python/FastAPI)
+  ai-service:
+    build: 
+      context: ./services/ai-service
+    container_name: alzheimer-ai
+    restart: unless-stopped
     volumes:
       - ./services/ai-service:/app
+    networks:
+      - app-network
 
-  # 5. Database
-  alz-mongo:
-    image: mongo:latest
+  # 4. Nginx (Reverse Proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: alzheimer-nginx
+    restart: always
     ports:
-      - "27017:27017"
+      - "80:80"  # เปิด Port 80 ให้เครื่องเราเข้าถึงได้
     volumes:
-      - mongo-data:/data/db
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend-core
+    networks:
+      - app-network
 
-volumes:
-  mongo-data:
+# สร้าง Network ให้แต่ละ Service คุยกันผ่านชื่อ Service ได้เลย (เช่น http://backend-core)
+networks:
+  app-network:
+    driver: bridge
