@@ -12,7 +12,7 @@ app.use(express.json());
 // app.use('/api/history', require('./src/history/routes'));
 
 app.get('/', (req, res) => {
-  res.json({ message: "Backend Core is running!" });
+  res.json({ message: "end Core is running!" });
 });
 
 const PORT = 3000;
