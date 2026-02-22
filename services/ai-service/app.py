@@ -1,8 +1,11 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import random
-import time
 import uvicorn
+import io
+import torch
+import torchvision.transforms as transforms
+from PIL import Image
+import timm
 
 app = FastAPI(title="Alzheimer Diagnosis AI Service")
 
@@ -15,41 +18,87 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------------------------------------------------------
+# 🧠 1. โหลดโครงสร้างโมเดลและยัด Weights (state_dict)
+# ---------------------------------------------------------
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model_path = "model/efficientnetb0_alzheimer.pt"
+
+try:
+    # 1.1 สร้างโครงสร้าง EfficientNetB0 เปล่าๆ ขึ้นมาก่อน (num_classes=4 ตามที่เทรน)
+    model = timm.create_model("efficientnet_b0", pretrained=False, num_classes=4)
+    
+    # 1.2 โหลดไฟล์ .pt ที่เป็น Dictionary
+    checkpoint = torch.load(model_path, map_location=device)
+    
+    # 1.3 เอา Weights (state_dict) ใส่เข้าไปในโมเดล
+    model.load_state_dict(checkpoint["model_state_dict"])
+    
+    model.to(device)
+    model.eval() # เปลี่ยนเป็นโหมดทำนายผล
+    print("✅ Model loaded successfully!")
+    
+except Exception as e:
+    print(f"❌ Error loading model: {e}")
+    model = None
+
+# ---------------------------------------------------------
+# 🖼️ 2. ตั้งค่า Image Transform ให้ตรงกับตอนเทรนเป๊ะๆ
+# ---------------------------------------------------------
+transform = transforms.Compose([
+    transforms.Resize((128, 128)), # ตอนเทรนใช้ 128
+    transforms.ToTensor(),
+    transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]) # ค่า Mean/Std ตาม Notebook
+])
+
+# ลำดับคลาสตามตัวแปร class_names ใน Notebook
+CLASSES = ['Mild Demented', 'Moderate Demented', 'Non Demented', 'Very Mild Demented']
+
 @app.get("/")
 def read_root():
-    return {"status": "AI Service is running"}
+    return {"status": "AI Service is running", "device": str(device)}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    # อ่านไฟล์รูปภาพ (เพื่อยืนยันว่าได้รับไฟล์จริง)
-    contents = await file.read()
-    
-    # หน่วงเวลาจำลองการประมวลผลของ AI 1.5 วินาที
-    time.sleep(1.5)
-    
-    # ---------------------------------------------------------
-    # TODO: แทรกโค้ดโหลดโมเดล PyTorch (efficientnetb0_alzheimer.pt) 
-    # และประมวลผลรูปภาพ (contents) ตรงนี้
-    # ---------------------------------------------------------
+    if model is None:
+        return {"error": "Model not loaded properly. Check server logs."}
 
-    # MOCK DATA: จำลองผลลัพธ์ที่จะส่งกลับไป (สุ่มความน่าจะเป็น)
-    # สมมติให้ 'Mild' มีค่าสูงเพื่อจำลองเคสที่เจอโรค
-    mock_mild_prob = random.uniform(70.0, 95.0)
-    mock_non_prob = random.uniform(0.0, 10.0)
-    mock_very_mild_prob = random.uniform(0.0, 15.0)
-    mock_moderate_prob = 100.0 - (mock_mild_prob + mock_non_prob + mock_very_mild_prob)
+    try:
+        # อ่านไฟล์รูปภาพและแปลงโหมดสีเป็น RGB
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        
+        # แปลงเป็น Tensor และเพิ่มมิติ Batch
+        img_tensor = transform(image).unsqueeze(0).to(device)
+        
+        # ---------------------------------------------------------
+        # 🤖 3. ส่งเข้าโมเดลทำนายผล
+        # ---------------------------------------------------------
+        with torch.no_grad():
+            outputs = model(img_tensor)
+            # แปลงผลลัพธ์เป็นเปอร์เซ็นต์ด้วย Softmax
+            probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
+            
+        # หาคลาสที่คะแนนสูงสุด
+        predicted_idx = torch.argmax(probabilities).item()
+        predicted_class = CLASSES[predicted_idx]
+        
+        # ดึงค่าความน่าจะเป็นรายคลาส (คูณ 100 เพื่อให้เป็น %)
+        prob_dict = {
+            "mild": round(probabilities[0].item() * 100, 2),
+            "moderate": round(probabilities[1].item() * 100, 2),
+            "non": round(probabilities[2].item() * 100, 2),
+            "very_mild": round(probabilities[3].item() * 100, 2)
+        }
 
-    return {
-        "prediction": "Mild Demented",
-        "probabilities": {
-            "non": round(mock_non_prob, 2),
-            "very_mild": round(mock_very_mild_prob, 2),
-            "mild": round(mock_mild_prob, 2),
-            "moderate": round(abs(mock_moderate_prob), 2)
-        },
-        "filename": file.filename
-    }
+        return {
+            "prediction": predicted_class,
+            "probabilities": prob_dict,
+            "filename": file.filename
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
-    # รันเซิร์ฟเวอร์ที่ Port 5000 (เปิดรับ request จากทุก IP ในวง Docker)
     uvicorn.run(app, host="0.0.0.0", port=5000)
