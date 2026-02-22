@@ -128,7 +128,7 @@ export default function HistoryPage() {
                 
                 <div className="flex flex-col gap-3">
                   <label className="cursor-pointer bg-white border border-blue-600 text-blue-600 text-center py-2.5 rounded-lg font-medium hover:bg-blue-50 transition shadow-sm">
-                    Choose File / Upload
+                    Edit Picture / Upload
                     <input type="file" className="hidden" accept=".jpg,.png,.jpeg" onChange={handleFileChange} />
                   </label>
                   <p className="text-xs text-slate-400 text-center italic">Validation (.png, .jpg, .jpeg)</p>
@@ -139,22 +139,22 @@ export default function HistoryPage() {
                     className="bg-[#1e3a8a] text-white py-3 rounded-lg font-bold hover:bg-blue-800 transition disabled:bg-slate-300 disabled:cursor-not-allowed shadow-md flex justify-center items-center gap-2"
                   >
                     {loading ? (
-                       <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Analyzing...</>
-                    ) : "Analyze / Predict"}
+                       <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Uploading...</>
+                    ) : "Save"}
                   </button>
                 </div>
               </div>
 
               {/* Right Side: Results */}
               <div className="bg-slate-50 rounded-xl p-6 border border-slate-100 flex flex-col">
-                <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">Result: 
+                <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">Medical Record Number:
                   <span className={result ? "text-blue-600 font-bold bg-blue-100 px-3 py-1 rounded-md" : "text-slate-400 italic font-normal text-base"}>
-                    {result ? result.prediction : "Waiting for analysis..."}
+                    {result ? result.prediction : "1234567"}
                   </span>
                 </h3>
                 
-                <div className="space-y-5 flex-1">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confidence Probabilities</p>
+                <div className="bg-slate-50 rounded-xl p-6 border border-slate-100 flex flex-col">
+                  <p className="text-lg font-semibold mb-6 flex items-center gap-2">ชื่อผู้ป่วย นามสกุลผู้ป่วย</p>
                   
                   <ProbabilityBar label="Non-Demented" value={result?.probabilities?.non || 0} />
                   <ProbabilityBar label="Very Mild" value={result?.probabilities?.very_mild || 0} />
