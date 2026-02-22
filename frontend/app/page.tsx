@@ -256,7 +256,9 @@ export default function LoginPage() {
                     {auth.user?.role === 'DOCTOR' ? (
                       <>
                         <MenuButton icon={<FlaskConical />} title="สั่งยา (Prescription)" desc="จัดการรายการยาและคำสั่งรักษา" color="blue" />
-                        <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
+                        <Link href="/history" className="block w-full">
+                          <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
+                        </Link>
                         <MenuButton icon={<Activity />} title="ดูผล Lab (Laboratory)" desc="ตรวจสอบผลการตรวจทางห้องปฏิบัติการ" color="blue" />
                         {/* เพิ่มเมนูวิเคราะห์อัลไซเมอร์ให้หมอ */}
                         <Link href="/diagnosis" className="block w-full">
