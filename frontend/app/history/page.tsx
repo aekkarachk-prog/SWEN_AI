@@ -105,7 +105,7 @@ export default function HistoryPage() {
         {/* Diagnosis Area */}
         <div className="p-8 overflow-y-auto">
           <div className="max-w-4xl bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold mb-8 text-slate-800">Alzheimer's Diagnosis</h2>
+            <h2 className="text-2xl font-bold mb-8 text-slate-800">Patient Record</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Side: Upload & Preview */}
