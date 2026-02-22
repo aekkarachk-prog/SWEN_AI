@@ -65,8 +65,12 @@ export default function HistoryPage() {
           <Link href="/">
             <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" />
           </Link>
-          <NavItem icon={<Users size={20}/>} label="Patients" />
-          <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis" active />
+          <Link href="/history">
+            <NavItem icon={<Stethoscope size={20}/>} label="Patients" active/>
+          </Link>
+          <Link href="/diagnosis">
+            <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/>
+          </Link>
           <NavItem icon={<Settings size={20}/>} label="Setting" />
         </nav>
 
@@ -117,7 +121,7 @@ export default function HistoryPage() {
                     <div className="text-center text-blue-300">
                       <Upload size={48} className="mx-auto mb-4 opacity-50" />
                       <p className="font-medium">Image Preview & Upload</p>
-                      <p className="text-xs mt-2 opacity-70">Drop MRI scan here</p>
+                      <p className="text-xs mt-2 opacity-70">Upload MRI scan here</p>
                     </div>
                   )}
                 </div>
