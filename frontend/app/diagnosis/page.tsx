@@ -65,8 +65,12 @@ export default function DiagnosisPage() {
           <Link href="/">
             <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" />
           </Link>
-          <NavItem icon={<Users size={20}/>} label="Patients" />
-          <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis" active />
+          <Link href="/history">
+            <NavItem icon={<Stethoscope size={20}/>} label="Patients" />
+          </Link>
+          <Link href="/diagnosis">
+            <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis" active/>
+          </Link>
           <NavItem icon={<Settings size={20}/>} label="Setting" />
         </nav>
 
