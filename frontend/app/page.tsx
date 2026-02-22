@@ -48,28 +48,44 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate network delay
-    setTimeout(() => {
-      const userRecord = MOCK_USERS[username.toLowerCase()];
-      if (userRecord && userRecord.password === password) {
-        const token = generateFakeToken(username, userRecord.role);
+    try {
+      // 🚀 ยิงไปหา API Backend ที่เราเพิ่งเขียนเสร็จ!
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.toLowerCase(), password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // ถ้าล็อกอินสำเร็จ (API ตอบ 200 OK)
         setAuth({
           isAuthenticated: true,
-          user: { username, role: userRecord.role, name: userRecord.name },
-          token: token,
+          // ใช้ username จากที่กรอก และกำหนด Role แบบ Hardcode ไปก่อน (เพราะตอนนี้ API ยังไม่ดึงข้อมูลจาก DB)
+          user: { 
+            username: username, 
+            role: username === 'doctor' || username === 'doctor_somchai' ? 'DOCTOR' : 'NURSE', 
+            name: username === 'doctor' || username === 'doctor_somchai' ? 'นพ. สมชาย ใจดี' : 'พว. สมศรี มีสุข' 
+          },
+          token: data.token, // 🔑 เอา Token ที่ API ส่งมาไปใช้งาน!
         });
       } else {
-        setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        // ถ้ารหัสผิด (API ตอบ 400 หรือ 401)
+        setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
+    } catch (err) {
+      setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
-
+  
   const handleLogout = () => {
     setAuth({ isAuthenticated: false, user: null, token: null });
     setUsername('');
