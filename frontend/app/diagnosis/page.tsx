@@ -7,19 +7,37 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+
 export default function DiagnosisPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setResult(null); // Reset result when new image is uploaded
+    if (!file) return;
+
+    // 🔥 ตรวจประเภทไฟล์
+    const allowedTypes = ["image/png", "image/jpeg"];
+  
+    if (!allowedTypes.includes(file.type)) {
+      alert("อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น");
+      e.target.value = ""; // reset input
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      return;
     }
+  
+    // 🔥 จำกัดขนาดไฟล์ (เช่น 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      alert("ไฟล์ต้องไม่เกิน 5MB");
+      return;
+    }
+  
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setResult(null);
   };
 
   const handleAnalyze = async () => {
@@ -189,6 +207,7 @@ function NavItem({ icon, label, active = false }: { icon: any, label: string, ac
 }
 
 function ProbabilityBar({ label, value, highlight = false }: { label: string, value: number, highlight?: boolean }) {
+
   const isHigh = value > 50;
   return (
     <div className="space-y-1.5">
