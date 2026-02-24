@@ -1,5 +1,6 @@
 "use client";
 
+import Swal from "sweetalert2";
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
@@ -13,32 +14,61 @@ export default function DiagnosisPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    // 🔥 ตรวจประเภทไฟล์
-    const allowedTypes = ["image/png", "image/jpeg"];
-  
-    if (!allowedTypes.includes(file.type)) {
-      alert("อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น");
-      e.target.value = ""; // reset input
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      return;
-    }
-  
-    // 🔥 จำกัดขนาดไฟล์ (เช่น 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      alert("ไฟล์ต้องไม่เกิน 5MB");
-      return;
-    }
-  
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setResult(null);
-  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const allowedTypes = ["image/png", "image/jpeg"];
+  const maxSize = 5 * 1024 * 1024; // 5MB
+
+  // ❌ ตรวจประเภทไฟล์
+  if (!allowedTypes.includes(file.type)) {
+    Swal.fire({
+      icon: "error",
+      title: "ไฟล์ไม่ถูกต้อง",
+      text: "อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น",
+      background: "#0f172a",
+      color: "#fff",
+      confirmButtonColor: "#ef4444",
+    });
+
+    e.target.value = "";
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    return;
+  }
+
+  // ❌ ตรวจขนาดไฟล์
+  if (file.size > maxSize) {
+    Swal.fire({
+      icon: "warning",
+      title: "ไฟล์ใหญ่เกินไป",
+      text: "ไฟล์ต้องมีขนาดไม่เกิน 5MB",
+      background: "#0f172a",
+      color: "#fff",
+      confirmButtonColor: "#f59e0b",
+    });
+
+    e.target.value = "";
+    return;
+  }
+
+  // ✅ ผ่านทุกเงื่อนไข
+  setSelectedFile(file);
+  setPreviewUrl(URL.createObjectURL(file));
+  setResult(null);
+
+  Swal.fire({
+    icon: "success",
+    title: "ไฟล์พร้อมอัปโหลด 🎉",
+    text: file.name,
+    timer: 1200,
+    showConfirmButton: false,
+    background: "#0f172a",
+    color: "#fff",
+  });
+};
 
   const handleAnalyze = async () => {
     if (!selectedFile) return alert("กรุณาอัปโหลดรูปภาพสแกนสมอง (MRI)");
