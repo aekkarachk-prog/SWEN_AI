@@ -133,9 +133,21 @@ export default function CreatePatientPage() {
         <div className="p-10 overflow-y-auto flex justify-center items-start">
           <div className="w-full max-w-6xl bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
-                ข้อมูลผู้ป่วย
-              </h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+                    ข้อมูลผู้ป่วย
+                </h2>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                    const confirmDelete = confirm("คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลผู้ป่วย?");
+                    if (confirmDelete) {
+                        alert("ลบข้อมูลผู้ป่วยเรียบร้อยแล้ว");
+                    }
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-red-600/30 transition-all duration-300">
+                    ลบข้อมูลผู้ป่วย
+                </button>
             </div>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-stretch">
