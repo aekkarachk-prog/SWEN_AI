@@ -39,11 +39,18 @@ export default function CreatePatientPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
+    if (!file) return;
+  
+    const allowedTypes = ["image/png", "image/jpeg"];
+    
+    if (!allowedTypes.includes(file.type)) {
+        alert("อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น");
+        e.target.value = ""; 
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        return;
+      }
+    };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

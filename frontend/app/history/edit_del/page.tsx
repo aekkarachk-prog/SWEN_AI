@@ -38,19 +38,19 @@ export default function CreatePatientPage() {
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
   
-      const allowedTypes = ["image/png", "image/jpeg"];
+    const allowedTypes = ["image/png", "image/jpeg"];
     
-      if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(file.type)) {
         alert("อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น");
         e.target.value = ""; 
         setSelectedFile(null);
         setPreviewUrl(null);
         return;
       }
-    }
+    };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -184,7 +184,7 @@ export default function CreatePatientPage() {
                 <div className="space-y-6 flex-1">
                   {/* ID Field (Read Only) */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Patient ID (Auto Generated)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Patient ID</label>
                     <div className="relative">
                       <Fingerprint size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
                       <input 
