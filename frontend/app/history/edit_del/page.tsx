@@ -50,6 +50,7 @@ export default function CreatePatientPage() {
         setPreviewUrl(null);
         return;
       }
+    }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
