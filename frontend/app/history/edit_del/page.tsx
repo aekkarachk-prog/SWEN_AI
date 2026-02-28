@@ -105,7 +105,7 @@ export default function CreatePatientPage() {
               <ArrowLeft size={20} />
             </Link>
             <span className="text-slate-400 text-sm font-medium">
-              Path: history / <span className="text-blue-600 font-bold">create</span>
+              Path: history / <span className="text-blue-600 font-bold">update & delete</span>
             </span>
           </div>
 
