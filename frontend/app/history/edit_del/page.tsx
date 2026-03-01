@@ -112,7 +112,7 @@ export default function CreatePatientPage() {
               <ArrowLeft size={20} />
             </Link>
             <span className="text-slate-400 text-sm font-medium">
-              Path: history / <span className="text-blue-600 font-bold">create</span>
+              Path: history / <span className="text-blue-600 font-bold">update & delete</span>
             </span>
           </div>
 
@@ -133,12 +133,21 @@ export default function CreatePatientPage() {
         <div className="p-10 overflow-y-auto flex justify-center items-start">
           <div className="w-full max-w-6xl bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
-                ลงทะเบียนผู้ป่วยใหม่
-              </h2>
-              <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-xs font-bold border border-blue-100 uppercase tracking-widest">
-                New Registration
-              </span>
+                <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+                    ข้อมูลผู้ป่วย
+                </h2>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                    const confirmDelete = confirm("คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลผู้ป่วย?");
+                    if (confirmDelete) {
+                        alert("ลบข้อมูลผู้ป่วยเรียบร้อยแล้ว");
+                    }
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-red-600/30 transition-all duration-300">
+                    ลบข้อมูลผู้ป่วย
+                </button>
             </div>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-stretch">
@@ -187,7 +196,7 @@ export default function CreatePatientPage() {
                 <div className="space-y-6 flex-1">
                   {/* ID Field (Read Only) */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Patient ID (Auto Generated)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Patient ID</label>
                     <div className="relative">
                       <Fingerprint size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
                       <input 
