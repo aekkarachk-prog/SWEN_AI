@@ -61,11 +61,19 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     // ส่งผลลัพธ์จาก AI กลับไปให้ Frontend
     res.json(aiResponse.data);
-    console.log("File received:", req.file.originalname);
-    res.json({ message: "Upload success" });
+    console.log("File received and processed:", req.file.originalname);
 
   } catch (error) {
     console.error('Error in diagnosis route:', error.message);
+    
+    // ถ้า error มาจาก axios (AI Service) ให้ส่ง status code และ message ตามนั้น
+    if (error.response) {
+      return res.status(error.response.status).json({
+        error: 'AI Service Error',
+        details: error.response.data.detail || error.response.data.error || error.message
+      });
+    }
+
     res.status(500).json({ 
       error: 'Failed to process diagnosis',
       details: error.message 
