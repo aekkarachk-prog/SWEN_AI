@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import io
@@ -61,7 +61,7 @@ def read_root():
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if model is None:
-        return {"error": "Model not loaded properly. Check server logs."}
+        raise HTTPException(status_code=503, detail="Model not loaded properly. Check server logs.")
 
     try:
         # อ่านไฟล์รูปภาพและแปลงโหมดสีเป็น RGB
@@ -98,7 +98,7 @@ async def predict(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

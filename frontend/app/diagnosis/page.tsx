@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
-  Upload, Download, CheckCircle2, ArrowLeft
+  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -48,23 +48,48 @@ export default function DiagnosisPage() {
     formData.append('image', selectedFile);
 
     try {
-      const response = await fetch('/api/diagnosis', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+      const response = await fetch(`${API_URL}/api/diagnosis`, {
         method: 'POST',
         body: formData,
       });
+      
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.details || "เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล");
+      }
+      
       setResult(data);
-      setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error analyzing:", error);
-      setTimeout(() => {
-        setResult({
-          prediction: "Mild Demented",
-          probabilities: { non: 10, very_mild: 2, mild: 88, moderate: 0 }
-        });
-        setLoading(false);
-      }, 1500);
+      Swal.fire({
+        icon: 'error',
+        title: 'Analysis Failed',
+        text: error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์',
+        confirmButtonColor: '#3b82f6'
+      });
+      setResult(null);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleContactAdmin = () => {
+    Swal.fire({
+      title: '<strong>Contact Administrator</strong>',
+      icon: 'info',
+      html:
+        '<div class="text-left space-y-2">' +
+        '<p><b>Phone:</b> 191 (IT Support)</p>' +
+        '<p><b>Email:</b> it-support@mdkku.com</p>' +
+        '<p><b>Office:</b> 9127, 1th Floor</p>' +
+        '</div>',
+      showCloseButton: true,
+      focusConfirm: false,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#3b82f6',
+    });
   };
 
   return (
@@ -88,6 +113,9 @@ export default function DiagnosisPage() {
             <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis" active/>
           </Link>
           <NavItem icon={<Settings size={20}/>} label="Setting" />
+          <div onClick={handleContactAdmin}>
+            <NavItem icon={<MessageSquare size={20}/>} label="Contact Admin" />
+          </div>
         </nav>
 
         <div className="p-4 border-t text-nowrap">

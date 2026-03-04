@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
-  Download, CheckCircle2, ArrowLeft, Search, UserCircle2, PlusCircle
+  Download, CheckCircle2, ArrowLeft, Search, UserCircle2, PlusCircle,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +29,23 @@ export default function HistoryPage() {
     }, 800);
   };
 
+  const handleContactAdmin = () => {
+    Swal.fire({
+      title: '<strong>Contact Administrator</strong>',
+      icon: 'info',
+      html:
+        '<div class="text-left space-y-2">' +
+        '<p><b>Phone:</b> 043-363-xxx (IT Support)</p>' +
+        '<p><b>Email:</b> it-support@mdkku.com</p>' +
+        '<p><b>Office:</b> Building 1, 4th Floor</p>' +
+        '</div>',
+      showCloseButton: true,
+      focusConfirm: false,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#3b82f6',
+    });
+  };
+
   return (
     <div className="flex h-screen bg-[#f8fafc]">
       {/* --- SIDEBAR --- */}
@@ -41,6 +60,9 @@ export default function HistoryPage() {
           <Link href="/history"><NavItem icon={<Users size={20}/>} label="Patients" active/></Link>
           <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
           <NavItem icon={<Settings size={20}/>} label="Setting" />
+          <div onClick={handleContactAdmin}>
+            <NavItem icon={<MessageSquare size={20}/>} label="Contact Admin" />
+          </div>
         </nav>
         <div className="p-4 border-t text-nowrap">
           <Link href="/"><button className="flex items-center gap-3 text-slate-400 hover:text-red-500 w-full px-4 py-2 transition text-sm font-medium"><LogOut size={18} /> Logout</button></Link>
