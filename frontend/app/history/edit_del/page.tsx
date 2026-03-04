@@ -13,8 +13,10 @@ import {
   Download,
   Phone,
   Fingerprint,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 
 export default function CreatePatientPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -70,6 +72,23 @@ export default function CreatePatientPage() {
     }
   };
 
+  const handleContactAdmin = () => {
+    Swal.fire({
+      title: '<strong>Contact Administrator</strong>',
+      icon: 'info',
+      html:
+        '<div class="text-left space-y-2">' +
+        '<p><b>Phone:</b> 043-363-xxx (IT Support)</p>' +
+        '<p><b>Email:</b> it-support@mdkku.com</p>' +
+        '<p><b>Office:</b> Building 1, 4th Floor</p>' +
+        '</div>',
+      showCloseButton: true,
+      focusConfirm: false,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#3b82f6',
+    });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -92,6 +111,9 @@ export default function CreatePatientPage() {
             <NavItem icon={<Stethoscope size={20} />} label="Diagnosis" />
           </Link>
           <NavItem icon={<Settings size={20} />} label="Setting" />
+          <div onClick={handleContactAdmin}>
+            <NavItem icon={<MessageSquare size={20} />} label="Contact Admin" />
+          </div>
         </nav>
         <div className="p-4 border-t">
           <Link href="/">

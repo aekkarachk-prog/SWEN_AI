@@ -44,6 +44,20 @@ app.post('/api/login', (req, res) => {
 });
 // ---------------------------------------------------------
 
+// ---------------------------------------------------------
+// 🚨 Global Error Handler
+// ---------------------------------------------------------
+app.use((err, req, res, next) => {
+  console.error('Unhandled Error:', err.message || err);
+  
+  // จัดการ Error จาก Multer (เช่น ไฟล์ใหญ่เกิน)
+  if (err instanceof require('multer').MulterError || err.message.includes('Invalid file')) {
+    return res.status(400).json({ error: 'File upload error', details: err.message });
+  }
+
+  res.status(500).json({ error: 'Internal Server Error', details: err.message || 'Something went wrong' });
+});
+
 // เช็คว่าถ้าโดนเรียกด้วย Jest (Test) จะไม่เปิดพอร์ต 3000 แช่ทิ้งไว้
 if (require.main === module) {
   app.listen(3000, () => {

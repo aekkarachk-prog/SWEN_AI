@@ -1,0 +1,35 @@
+name: Backend CI
+
+# กำหนดเหตุการณ์ที่จะให้สายพานทำงาน
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. ดึงโค้ดจาก GitHub ลงมาที่เครื่องจำลอง
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. ติดตั้ง Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/backend-core/package-lock.json
+
+      # 3. ติดตั้ง Dependencies (Library ต่างๆ)
+      - name: Install dependencies
+        run: npm install
+        working-directory: services/backend-core
+
+      # 4. รัน Test Case ที่เราเขียนไว้!
+      - name: Run Backend Tests
+        run: npm test
+        working-directory: services/backend-core
