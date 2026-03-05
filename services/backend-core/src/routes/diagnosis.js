@@ -6,7 +6,32 @@ const router = express.Router();
 
 // ตั้งค่า Multer สำหรับรับไฟล์ไว้ใน Memory (เพื่อส่งต่อได้ทันทีโดยไม่ต้องเซฟลงดิสก์)
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ["image/png", "image/jpeg"];
+    const allowedExtensions = [".png", ".jpg", ".jpeg"];
+  
+    const ext = file.originalname
+      .toLowerCase()
+      .substring(file.originalname.lastIndexOf("."));
+  
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error("Invalid file type (MIME)"));
+    }
+  
+    if (!allowedExtensions.includes(ext)) {
+      return cb(new Error("Invalid file extension"));
+    }
+  
+    cb(null, true);
+  }
+});
 
 // รับ POST Request ที่ /api/diagnosis
 router.post('/', upload.single('image'), async (req, res) => {
@@ -36,9 +61,19 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     // ส่งผลลัพธ์จาก AI กลับไปให้ Frontend
     res.json(aiResponse.data);
+    console.log("File received and processed:", req.file.originalname);
 
   } catch (error) {
     console.error('Error in diagnosis route:', error.message);
+    
+    // ถ้า error มาจาก axios (AI Service) ให้ส่ง status code และ message ตามนั้น
+    if (error.response) {
+      return res.status(error.response.status).json({
+        error: 'AI Service Error',
+        details: error.response.data.detail || error.response.data.error || error.message
+      });
+    }
+
     res.status(500).json({ 
       error: 'Failed to process diagnosis',
       details: error.message 
