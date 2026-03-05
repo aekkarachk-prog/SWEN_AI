@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'; // แนะนำให้ใช้ 'framer-motion' แทน 'motion/react' ใน Next.js
 import {
   User, Lock, LogOut, Stethoscope, History, FlaskConical,
-  Bed, Activity, ShieldCheck, Hospital, LayoutDashboard, Key
+  Bed, Activity, ShieldCheck, Hospital, LayoutDashboard, Key,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 // --- Types ---
 type Role = 'DOCTOR' | 'NURSE';
@@ -48,32 +50,66 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate network delay
-    setTimeout(() => {
-      const userRecord = MOCK_USERS[username.toLowerCase()];
-      if (userRecord && userRecord.password === password) {
-        const token = generateFakeToken(username, userRecord.role);
+    try {
+      // 🚀 ยิงไปหา API Backend (รองรับ Environment Variable สำหรับ Vercel + ngrok)
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+      const res = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.toLowerCase(), password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // ถ้าล็อกอินสำเร็จ (API ตอบ 200 OK)
         setAuth({
           isAuthenticated: true,
-          user: { username, role: userRecord.role, name: userRecord.name },
-          token: token,
+          // ใช้ username จากที่กรอก และกำหนด Role แบบ Hardcode ไปก่อน (เพราะตอนนี้ API ยังไม่ดึงข้อมูลจาก DB)
+          user: { 
+            username: username, 
+            role: username === 'doctor' || username === 'doctor_somchai' ? 'DOCTOR' : 'NURSE', 
+            name: username === 'doctor' || username === 'doctor_somchai' ? 'นพ. สมชาย ใจดี' : 'พว. สมศรี มีสุข' 
+          },
+          token: data.token, // 🔑 เอา Token ที่ API ส่งมาไปใช้งาน!
         });
       } else {
-        setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        // ถ้ารหัสผิด (API ตอบ 400 หรือ 401)
+        setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
+    } catch (err) {
+      setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
-
+  
   const handleLogout = () => {
     setAuth({ isAuthenticated: false, user: null, token: null });
     setUsername('');
     setPassword('');
+  };
+
+  const handleContactAdmin = () => {
+    Swal.fire({
+      title: '<strong>Contact Administrator</strong>',
+      icon: 'info',
+      html:
+        '<div class="text-left space-y-2">' +
+        '<p><b>Phone:</b> 043-363-xxx (IT Support)</p>' +
+        '<p><b>Email:</b> it-support@mdkku.com</p>' +
+        '<p><b>Office:</b> Building 1, 4th Floor</p>' +
+        '</div>',
+      showCloseButton: true,
+      focusConfirm: false,
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#3b82f6',
+    });
   };
 
   return (
@@ -127,7 +163,7 @@ export default function LoginPage() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 pl-11 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                      placeholder="กรอกชื่อผู้ใช้ (doctor / nurse)"
+                      placeholder="กรอกชื่อผู้ใช้ (doctor_somchai / nurse)"
                       required
                     />
                   </div>
@@ -142,7 +178,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 pl-11 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                      placeholder="กรอกรหัสผ่าน (123)"
+                      placeholder="password123/กรอกรหัสผ่าน (123)"
                       required
                     />
                   </div>
@@ -170,6 +206,16 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+
+              <div className="mt-8 pt-6 border-t border-slate-700/50 flex justify-center">
+                <button
+                  onClick={handleContactAdmin}
+                  className="text-sm text-slate-400 hover:text-blue-400 flex items-center gap-2 transition-colors"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  ลืมรหัสผ่านหรือพบปัญหา? ติดต่อผู้ดูแลระบบ
+                </button>
+              </div>
             </div>
           </motion.div>
         ) : (
@@ -200,13 +246,24 @@ export default function LoginPage() {
                     <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">{auth.user?.role}</span>
                   </div>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="bg-slate-900 hover:bg-red-900/30 text-slate-300 hover:text-red-400 p-3 rounded-xl transition-all border border-slate-700"
-                  title="ออกจากระบบ"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleContactAdmin}
+                    className="bg-slate-900 hover:bg-blue-900/30 text-slate-300 hover:text-blue-400 p-3 rounded-xl transition-all border border-slate-700"
+                    title="ติดต่อผู้ดูแลระบบ"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                  </button>
+                  
+                  <button
+                    onClick={handleLogout}
+                    className="bg-slate-900 hover:bg-red-900/30 text-slate-300 hover:text-red-400 p-3 rounded-xl transition-all border border-slate-700"
+                    title="ออกจากระบบ"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </header>
 
@@ -256,7 +313,9 @@ export default function LoginPage() {
                     {auth.user?.role === 'DOCTOR' ? (
                       <>
                         <MenuButton icon={<FlaskConical />} title="สั่งยา (Prescription)" desc="จัดการรายการยาและคำสั่งรักษา" color="blue" />
-                        <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
+                        <Link href="/history" className="block w-full">
+                          <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
+                        </Link>
                         <MenuButton icon={<Activity />} title="ดูผล Lab (Laboratory)" desc="ตรวจสอบผลการตรวจทางห้องปฏิบัติการ" color="blue" />
                         {/* เพิ่มเมนูวิเคราะห์อัลไซเมอร์ให้หมอ */}
                         <Link href="/diagnosis" className="block w-full">
