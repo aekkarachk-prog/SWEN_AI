@@ -3,15 +3,16 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# ก๊อปปี้ไฟล์ requirements.txt และติดตั้งไลบรารี
+# install dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ก๊อปปี้โค้ดและโมเดลทั้งหมด
+# copy source code
 COPY . .
 
-# เปิด Port 5000 (ภายใน Docker Network)
-EXPOSE 5000
+# Cloud Run ใช้ port 8080
+ENV PORT=8080
+EXPOSE 8080
 
-# รัน FastAPI
+# run FastAPI
 CMD ["python", "app.py"]
