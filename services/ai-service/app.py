@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import io
+import os
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
