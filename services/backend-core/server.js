@@ -59,10 +59,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error', details: err.message || 'Something went wrong' });
 });
 
-// เช็คว่าถ้าโดนเรียกด้วย Jest (Test) จะไม่เปิดพอร์ต 3000 แช่ทิ้งไว้
+// เริ่มเซิร์ฟเวอร์ที่พอร์ต 8080 หรือพอร์ตที่กำหนดใน environment variable
+const PORT = process.env.PORT || 8080;
+
 if (require.main === module) {
-  app.listen(3000, () => {
-    console.log('Server is running on port 3000');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
   });
 }
 
