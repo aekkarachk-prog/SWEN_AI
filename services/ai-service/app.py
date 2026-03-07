@@ -23,7 +23,8 @@ app.add_middleware(
 # 🧠 1. โหลดโครงสร้างโมเดลและยัด Weights (state_dict)
 # ---------------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_path = "model/efficientnetb0_alzheimer.pt"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, "model", "efficientnetb0_alzheimer.pt")
 
 try:
     # 1.1 สร้างโครงสร้าง EfficientNetB0 เปล่าๆ ขึ้นมาก่อน (num_classes=4 ตามที่เทรน)
