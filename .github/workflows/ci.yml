@@ -3,7 +3,9 @@ name: Backend CI
 # กำหนดเหตุการณ์ที่จะให้สายพานทำงาน
 on:
   push:
-    branches: [ main, master ]
+    branches: ["**"]
+    paths:
+      - 'services/backend-core/**'
   pull_request:
     branches: [ main, master ]
 

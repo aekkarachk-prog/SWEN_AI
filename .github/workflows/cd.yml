@@ -1,0 +1,43 @@
+name: Backend CD
+
+on:
+    workflow_run:
+        workflows: ["Backend CI"]
+        types:
+          - completed
+
+jobs:
+  deploy-staging:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'Patient-Service-เต็ม' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. setup gcloud
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: seai-cloud-project-489318
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      # 3. configure docker auth
+      - name: Configure Docker
+        run: gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+
+      # 4. build docker image
+      - name: Build Image
+        run: |
+          gcloud builds submit \
+          --tag asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core:${{ github.sha }}
+
+      # 5. deploy cloud run
+      - name: Deploy Cloud Run (Staging)
+        run: |
+          gcloud run deploy backend-core-staging \
+          --image asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core:${{ github.sha }} \
+          --region asia-southeast1 \
+          --platform managed \
+          --allow-unauthenticated

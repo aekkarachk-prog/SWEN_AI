@@ -6,8 +6,9 @@ const cors = require('cors');
 const diagnosisRoutes = require('./src/routes/diagnosis');
 
 const app = express();
-
-app.use(cors());
+app.use(cors({
+  origin: "*"
+})); // อนุญาตให้ทุกโดเมนเข้าถึง API ได้ (สำหรับการพัฒนา)
 app.use(express.json()); // บรรทัดนี้สำคัญมาก! ทำให้รับข้อมูล Login เป็น JSON ได้
 
 // เชื่อม Route เข้ากับ Path ของระบบ
