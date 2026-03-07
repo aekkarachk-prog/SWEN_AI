@@ -8,6 +8,7 @@ on:
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -30,13 +31,13 @@ jobs:
       - name: Build Image
         run: |
           gcloud builds submit \
-          --tag asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core
+          --tag asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core:${{ github.sha }}
 
       # 5. deploy cloud run
       - name: Deploy Cloud Run
         run: |
           gcloud run deploy backend-core \
-          --image asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core \
+          --image asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core:${{ github.sha }} \
           --region asia-southeast1 \
           --platform managed \
           --allow-unauthenticated
