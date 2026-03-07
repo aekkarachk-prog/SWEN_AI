@@ -8,7 +8,7 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 8080
 
 # รันเซิร์ฟเวอร์ด้วย Nodemon (โหมด dev)
 CMD ["npm", "run", "dev"]

@@ -4,6 +4,8 @@ name: Backend CI
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - 'services/backend-core/**'
   pull_request:
     branches: [ main, master ]
 
