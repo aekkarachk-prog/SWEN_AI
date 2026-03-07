@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException , Body
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import io
@@ -60,6 +60,16 @@ CLASSES = ['Mild Demented', 'Moderate Demented', 'Non Demented', 'Very Mild Deme
 def read_root():
     return {"status": "AI Service is running", "device": str(device)}
 
+@app.post("/api/login")
+async def login(data: dict = Body(...)):
+    username = data.get("username")
+    password = data.get("password")
+
+    if username == "doctor_somchai" and password == "password123":
+        return {"message": "Login successful", "token": "mock_token"}
+
+    raise HTTPException(status_code=401, detail="Invalid username or password")
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if model is None:
@@ -101,7 +111,7 @@ async def predict(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+print(app.url_map)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
