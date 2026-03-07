@@ -7,8 +7,8 @@ on:
           - completed
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  deploy-staging:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'Patient-Service-เต็ม' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -34,9 +34,9 @@ jobs:
           --tag asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core:${{ github.sha }}
 
       # 5. deploy cloud run
-      - name: Deploy Cloud Run
+      - name: Deploy Cloud Run (Staging)
         run: |
-          gcloud run deploy backend-core \
+          gcloud run deploy backend-core-staging \
           --image asia-southeast1-docker.pkg.dev/seai-cloud-project-489318/seai-repo/backend-core:${{ github.sha }} \
           --region asia-southeast1 \
           --platform managed \
