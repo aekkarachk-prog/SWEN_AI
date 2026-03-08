@@ -112,7 +112,7 @@ export default function DiagnosisPage() {
     formData.append("file", selectedFile);
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API__URL || "";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
     
       const response = await fetch(`${API_URL}/predict`, {
         method: "POST",
