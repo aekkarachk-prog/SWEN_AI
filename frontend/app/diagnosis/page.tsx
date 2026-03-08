@@ -109,13 +109,13 @@ export default function DiagnosisPage() {
     });
   
     const formData = new FormData();
-    formData.append('file', selectedFile); 
+    formData.append("file", selectedFile);
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_AI_PREDICT_URL || '';
+      const API_URL = process.env.NEXT_PUBLIC_API__URL || "";
     
       const response = await fetch(`${API_URL}/predict`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
     
@@ -134,35 +134,33 @@ export default function DiagnosisPage() {
     
       const confidence = getConfidence(data);
     
-    } catch (error) {
-      console.error(error);
-    }
-
-Swal.fire({
-  icon: confidence < 0.6 ? "warning" : "success",
-  title: "วิเคราะห์เสร็จแล้ว 🎉",
-  html: `
-    <div style="text-align:left; font-size:14px">
-      <b>ผลลัพธ์:</b> ${data.prediction}<br/>
-      <b>ความมั่นใจ:</b> ${confidence.toFixed(2)}%
-    </div>
-  `,
-  confirmButtonColor: "#3b82f6"
-});
-  
-    } catch (error: any) {
-      console.error("Error analyzing:", error);
-  
       Swal.fire({
-        icon: 'error',
-        title: 'Analysis Failed',
-        text: error.message || 
-              'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์',
-        confirmButtonColor: '#ef4444'
+        icon: confidence < 0.6 ? "warning" : "success",
+        title: "วิเคราะห์เสร็จแล้ว 🎉",
+        html: `
+          <div style="text-align:left; font-size:14px">
+            <b>ผลลัพธ์:</b> ${data.prediction}<br/>
+            <b>ความมั่นใจ:</b> ${confidence.toFixed(2)}%
+          </div>
+        `,
+        confirmButtonColor: "#3b82f6"
       });
-  
+    
+    } catch (error: any) {
+    
+      console.error("Error analyzing:", error);
+    
+      Swal.fire({
+        icon: "error",
+        title: "Analysis Failed",
+        text:
+          error.message ||
+          "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์",
+        confirmButtonColor: "#ef4444"
+      });
+    
       setResult(null);
-  
+    
     } finally {
       setLoading(false);
     }
