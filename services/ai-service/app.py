@@ -60,15 +60,9 @@ CLASSES = ['Mild Demented', 'Moderate Demented', 'Non Demented', 'Very Mild Deme
 def read_root():
     return {"status": "AI Service is running", "device": str(device)}
 
-@app.post("/api/login")
-async def login(data: dict = Body(...)):
-    username = data.get("username")
-    password = data.get("password")
-
-    if username == "doctor_somchai" and password == "password123":
-        return {"message": "Login successful", "token": "mock_token"}
-
-    raise HTTPException(status_code=401, detail="Invalid username or password")
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
