@@ -57,7 +57,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
     try {
       // 🚀 ยิงไปหา API Backend (รองรับ Environment Variable สำหรับ Vercel + ngrok)
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+      const API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || '';
       const res = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
