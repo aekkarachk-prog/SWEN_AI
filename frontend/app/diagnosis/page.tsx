@@ -109,56 +109,58 @@ export default function DiagnosisPage() {
     });
   
     const formData = new FormData();
-    formData.append('image', selectedFile);
-  
+    formData.append("file", selectedFile);
+    
     try {
-      const API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || '';
-      const response = await fetch(`${API_URL}/api/diagnosis`, {
-        method: 'POST',
+      const API_URL = process.env.NEXT_PUBLIC_API__URL || "";
+    
+      const response = await fetch(`${API_URL}/predict`, {
+        method: "POST",
         body: formData,
       });
-        
+    
       const data = await response.json();
-        
+    
       if (!response.ok) {
         throw new Error(
-          data.error || 
-          data.details || 
+          data.error ||
+          data.details ||
           "เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล"
         );
       }
-  
+    
       setResult(data);
-  
-      Swal.close(); 
-  
- const confidence = getConfidence(data);
-
-Swal.fire({
-  icon: confidence < 0.6 ? "warning" : "success",
-  title: "วิเคราะห์เสร็จแล้ว 🎉",
-  html: `
-    <div style="text-align:left; font-size:14px">
-      <b>ผลลัพธ์:</b> ${data.prediction}<br/>
-      <b>ความมั่นใจ:</b> ${confidence.toFixed(2)}%
-    </div>
-  `,
-  confirmButtonColor: "#3b82f6"
-});
-  
-    } catch (error: any) {
-      console.error("Error analyzing:", error);
-  
+      Swal.close();
+    
+      const confidence = getConfidence(data);
+    
       Swal.fire({
-        icon: 'error',
-        title: 'Analysis Failed',
-        text: error.message || 
-              'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์',
-        confirmButtonColor: '#ef4444'
+        icon: confidence < 0.6 ? "warning" : "success",
+        title: "วิเคราะห์เสร็จแล้ว 🎉",
+        html: `
+          <div style="text-align:left; font-size:14px">
+            <b>ผลลัพธ์:</b> ${data.prediction}<br/>
+            <b>ความมั่นใจ:</b> ${confidence.toFixed(2)}%
+          </div>
+        `,
+        confirmButtonColor: "#3b82f6"
       });
-  
+    
+    } catch (error: any) {
+    
+      console.error("Error analyzing:", error);
+    
+      Swal.fire({
+        icon: "error",
+        title: "Analysis Failed",
+        text:
+          error.message ||
+          "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์",
+        confirmButtonColor: "#ef4444"
+      });
+    
       setResult(null);
-  
+    
     } finally {
       setLoading(false);
     }
