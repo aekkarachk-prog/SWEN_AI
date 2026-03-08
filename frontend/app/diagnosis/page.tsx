@@ -109,30 +109,34 @@ export default function DiagnosisPage() {
     });
   
     const formData = new FormData();
-    formData.append('image', selectedFile);
-  
+    formData.append('file', selectedFile); 
+    
     try {
-      const API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || '';
-      const response = await fetch(`${API_URL}/api/diagnosis`, {
+      const API_URL = process.env.NEXT_PUBLIC_AI_PREDICT_URL || '';
+    
+      const response = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         body: formData,
       });
-        
+    
       const data = await response.json();
-        
+    
       if (!response.ok) {
         throw new Error(
-          data.error || 
-          data.details || 
+          data.error ||
+          data.details ||
           "เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล"
         );
       }
-  
+    
       setResult(data);
-  
-      Swal.close(); 
-  
- const confidence = getConfidence(data);
+      Swal.close();
+    
+      const confidence = getConfidence(data);
+    
+    } catch (error) {
+      console.error(error);
+    }
 
 Swal.fire({
   icon: confidence < 0.6 ? "warning" : "success",
