@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
-  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare
+  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare, Save
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -112,9 +112,13 @@ export default function DiagnosisPage() {
     formData.append("file", selectedFile);
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+      // 🛠️ ตรวจสอบให้แน่ใจว่า API_URL ไม่ใช่ค่าว่าง และมี /api เสมอ
+      let API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+      if (!API_URL || API_URL === "") {
+        API_URL = "/api";
+      }
     
-      const response = await fetch(`${API_URL}/predict`, {
+      const response = await fetch(`${API_URL}/diagnosis`, {
         method: "POST",
         body: formData,
       });
@@ -136,7 +140,7 @@ export default function DiagnosisPage() {
     
       Swal.fire({
         icon: confidence < 0.6 ? "warning" : "success",
-        title: "วิเคราะห์เสร็จแล้ว 🎉",
+        title: "วิเคราะห์เสร็จแล้ว",
         html: `
           <div style="text-align:left; font-size:14px">
             <b>ผลลัพธ์:</b> ${data.prediction}<br/>
@@ -164,6 +168,83 @@ export default function DiagnosisPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveToPatient = async (patientId: string) => {
+    if (!result || !selectedFile) return;
+
+    Swal.fire({
+      title: "กำลังบันทึกข้อมูลไปที่คนไข้...",
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+      const confidence = getConfidence(result);
+
+      // Create FormData to upload image AND data
+      const uploadData = new FormData();
+      uploadData.append("image", selectedFile);
+      uploadData.append("id_card", patientId);
+      uploadData.append("diagnosis", result.prediction);
+      uploadData.append("notes", `AI Diagnosis Confidence: ${confidence.toFixed(2)}% (Analyzed on ${new Date().toLocaleString()})`);
+      uploadData.append("probability", confidence.toString());
+
+      const res = await fetch(`${API_URL}/patients/upload`, {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกข้อมูลเรียบร้อย",
+          text: `ผลการวิเคราะห์ถูกเพิ่มเข้าสู่ประวัติคนไข้ ${patientId} แล้ว`,
+        });
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || "บันทึกไม่สำเร็จ");
+      }
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการบันทึก",
+        text: error.message,
+      });
+    }
+  };
+
+  const promptSaveToPatient = async () => {
+    const { value: patientHN } = await Swal.fire({
+      title: 'บันทึกประวัติการวินิจฉัย',
+      input: 'text',
+      inputLabel: 'กรุณากรอกรหัส HN หรือหมายเลขบัตรคนไข้',
+      inputPlaceholder: 'ตัวอย่าง: PT-123456',
+      showCancelButton: true,
+      confirmButtonText: 'บันทึกข้อมูล',
+      cancelButtonText: 'ยกเลิก',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'กรุณาระบุรหัสคนไข้!'
+        }
+      }
+    });
+
+    if (patientHN) {
+      handleSaveToPatient(patientHN);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('alz_auth');
+    Swal.fire({
+      title: 'ออกจากระบบสำเร็จ',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    }).then(() => {
+      window.location.href = "/";
+    });
   };
 
   const handleContactAdmin = () => {
@@ -210,11 +291,12 @@ export default function DiagnosisPage() {
         </nav>
 
         <div className="p-4 border-t text-nowrap">
-          <Link href="/">
-            <button className="flex items-center gap-3 text-gray-500 hover:text-red-500 w-full px-4 py-2 transition">
-              <LogOut size={20} /> Logout
-            </button>
-          </Link>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-gray-500 hover:text-red-500 w-full px-4 py-2 transition"
+          >
+            <LogOut size={20} /> Logout
+          </button>
         </div>
       </aside>
 
@@ -301,6 +383,14 @@ export default function DiagnosisPage() {
                 </div>
 
                 <div className="mt-10 pt-6 border-t border-slate-200/50">
+                   {result && (
+                     <button 
+                        onClick={promptSaveToPatient}
+                        className="w-full mb-4 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+                     >
+                       <Save size={18} /> Save to Patient Record
+                     </button>
+                   )}
                    <p className="text-xs text-slate-500 flex items-center gap-2 font-bold">
                      <CheckCircle2 size={18} className="text-emerald-500" /> 
                      History CRUD System Connected

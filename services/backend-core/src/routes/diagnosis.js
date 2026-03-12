@@ -4,10 +4,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const router = express.Router();
 
-// ตั้งค่า Multer สำหรับรับไฟล์ไว้ใน Memory (เพื่อส่งต่อได้ทันทีโดยไม่ต้องเซฟลงดิสก์)
-const storage = multer.memoryStorage();
-
-
+// ตั้งค่า Multer สำหรับรับไฟล์ไว้ใน Memory
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -34,7 +31,8 @@ const upload = multer({
 });
 
 // รับ POST Request ที่ /api/diagnosis
-router.post('/', upload.single('image'), async (req, res) => {
+// สำคัญ: Frontend ส่งมาในฟิลด์ 'file' (ตาม diagnosis/page.tsx)
+router.post('/', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Please upload an image file' });
@@ -47,13 +45,11 @@ router.post('/', upload.single('image'), async (req, res) => {
       contentType: req.file.mimetype,
     });
 
-    // ส่งไฟล์ไปให้ ai-service ที่พอร์ต 5000 (ชื่อโฮสต์ 'ai-service' มาจาก Docker network)
-    // ถ้าคุณรันแยกโดยไม่ใช้ Docker ให้เปลี่ยน 'ai-service' เป็น 'localhost'
-    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://svc-ai:5000';
+    // AI_SERVICE_URL จาก environment (ควรเป็น http://ai-service:8080/predict ตาม Dockerfile ของ AI)
+    // หมายเหตุ: ใน docker-compose.yml ตั้งไว้เป็น http://ai-service:5000/predict
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:5000/predict';
 
-    const response = await axios.post(`${AI_SERVICE_URL}/predict`, data);
-    
-    console.log('Forwarding image to AI Service...');
+    console.log(`Forwarding image to AI Service: ${aiServiceUrl}`);
     
     const aiResponse = await axios.post(aiServiceUrl, formData, {
       headers: {
@@ -63,12 +59,11 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     // ส่งผลลัพธ์จาก AI กลับไปให้ Frontend
     res.json(aiResponse.data);
-    console.log("File received and processed:", req.file.originalname);
+    console.log("AI Prediction successful:", aiResponse.data.prediction);
 
   } catch (error) {
     console.error('Error in diagnosis route:', error.message);
     
-    // ถ้า error มาจาก axios (AI Service) ให้ส่ง status code และ message ตามนั้น
     if (error.response) {
       return res.status(error.response.status).json({
         error: 'AI Service Error',

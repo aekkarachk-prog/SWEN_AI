@@ -56,9 +56,9 @@ const handleLogin = async (e: React.FormEvent) => {
     setError('');
 
     try {
-      // 🚀 ยิงไปหา API Backend (รองรับ Environment Variable สำหรับ Vercel + ngrok)
+      // 🚀 ยิงไปหา API Backend ใหม่ (เปลี่ยนจาก /api/login เป็น /api/auth/login)
       const API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || '';
-      const res = await fetch(`${API_URL}/api/login`, {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.toLowerCase(), password }),
@@ -70,12 +70,8 @@ const handleLogin = async (e: React.FormEvent) => {
         // ถ้าล็อกอินสำเร็จ (API ตอบ 200 OK)
         setAuth({
           isAuthenticated: true,
-          // ใช้ username จากที่กรอก และกำหนด Role แบบ Hardcode ไปก่อน (เพราะตอนนี้ API ยังไม่ดึงข้อมูลจาก DB)
-          user: { 
-            username: username, 
-            role: username === 'doctor' || username === 'doctor_somchai' ? 'DOCTOR' : 'NURSE', 
-            name: username === 'doctor' || username === 'doctor_somchai' ? 'นพ. สมชาย ใจดี' : 'พว. สมศรี มีสุข' 
-          },
+          // ดึงข้อมูลผู้ใช้จาก API โดยตรง (ไม่ต้อง Hardcode ใน Frontend อีกต่อไป)
+          user: data.user, 
           token: data.token, // 🔑 เอา Token ที่ API ส่งมาไปใช้งาน!
         });
       } else {

@@ -46,12 +46,19 @@ export default function CreatePatientPage() {
     const allowedTypes = ["image/png", "image/jpeg"];
     
     if (!allowedTypes.includes(file.type)) {
-        alert("อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น");
+        Swal.fire({
+          icon: "error",
+          title: "ไฟล์ไม่ถูกต้อง",
+          text: "อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น",
+        });
         e.target.value = ""; 
         setSelectedFile(null);
         setPreviewUrl(null);
         return;
       }
+
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
     };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -61,15 +68,88 @@ export default function CreatePatientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // จำลอง Logic การส่งข้อมูล
+    Swal.fire({
+      title: "กำลังบันทึกข้อมูล...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     try {
-      console.log("Saving Patient Data:", { patientId, ...formData, file: selectedFile });
-      alert(`บันทึกข้อมูลผู้ป่วย ${formData.firstName} (ID: ${patientId}) สำเร็จ!`);
-      // หลังจาก Save สำเร็จ อาจจะให้เด้งกลับหน้าหลัก
-      // window.location.href = "/history";
-    } catch (error) {
-      alert("เกิดข้อผิดพลาดในการบันทึก");
+      // 🛠️ ตรวจสอบให้แน่ใจว่า API_URL ไม่ใช่ค่าว่าง และมี /api เสมอ
+      let API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+      if (!API_URL || API_URL === "") {
+        API_URL = "/api";
+      }
+
+      const fullName = `${formData.firstName} ${formData.lastName}`;
+
+      // 1. Create Patient Meta Data
+      const patientRes = await fetch(`${API_URL}/patients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_card: patientId,
+          name: fullName,
+          gender: formData.gender,
+        }),
+      });
+
+      if (!patientRes.ok) {
+        const errorData = await patientRes.json();
+        throw new Error(errorData.error || "ไม่สามารถสร้างข้อมูลผู้ป่วยได้");
+      }
+
+      // 2. If there is a file, upload it
+      if (selectedFile) {
+        const uploadData = new FormData();
+        uploadData.append("image", selectedFile);
+        uploadData.append("id_card", patientId);
+        uploadData.append("name", fullName);
+        uploadData.append("diagnosis", "Initial Scan");
+        uploadData.append("notes", "Uploaded during registration");
+
+        const uploadRes = await fetch(`${API_URL}/patients/upload`, {
+          method: "POST",
+          body: uploadData,
+        });
+
+        if (!uploadRes.ok) {
+          console.error("Photo upload failed, but patient was created.");
+        }
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "บันทึกสำเร็จ",
+        text: `ลงทะเบียนผู้ป่วย ${fullName} เรียบร้อยแล้ว`,
+        confirmButtonColor: "#3b82f6"
+      }).then(() => {
+        window.location.href = "/history";
+      });
+
+    } catch (error: any) {
+      console.error("Error saving patient:", error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: error.message || "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์",
+        confirmButtonColor: "#ef4444"
+      });
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('alz_auth');
+    Swal.fire({
+      title: 'ออกจากระบบสำเร็จ',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    }).then(() => {
+      window.location.href = "/";
+    });
   };
 
   const handleContactAdmin = () => {
@@ -116,11 +196,12 @@ export default function CreatePatientPage() {
           </div>
         </nav>
         <div className="p-4 border-t">
-          <Link href="/">
-            <button className="flex items-center gap-3 text-slate-400 hover:text-red-500 w-full px-4 py-2 transition text-sm font-medium">
-              <LogOut size={18} /> Logout
-            </button>
-          </Link>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-slate-400 hover:text-red-500 w-full px-4 py-2 transition text-sm font-medium"
+          >
+            <LogOut size={18} /> Logout
+          </button>
         </div>
       </aside>
 

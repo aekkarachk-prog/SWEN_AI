@@ -2,8 +2,10 @@
 const express = require('express');
 const cors = require('cors');
 
-// ดึง Route ที่เพื่อนเขียนไว้มาใช้งาน
+// ดึง Route ต่างๆ มาใช้งาน
 const diagnosisRoutes = require('./src/routes/diagnosis');
+const authRoutes = require('./src/routes/auth');
+const userRoutes = require('./src/routes/user');
 
 const app = express();
 app.use(cors({
@@ -13,37 +15,13 @@ app.use(express.json()); // บรรทัดนี้สำคัญมาก!
 
 // เชื่อม Route เข้ากับ Path ของระบบ
 app.use('/api/diagnosis', diagnosisRoutes);
+app.use('/api/auth', authRoutes); // /api/auth/login
+app.use('/api/user', userRoutes); // /api/user/profile หรือ /api/user/account/:username
 
 // หน้าแรกเอาไว้เช็ค Health
 app.get('/', (req, res) => {
-  res.json({ message: "Backend Core is running!" });
+  res.json({ message: "Backend Core (Microservices Ready) is running!" });
 });
-
-// ---------------------------------------------------------
-// 🔐 ระบบ Login (พนักงานเฝ้าประตู)
-// ---------------------------------------------------------
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-
-  // Test Case 3: เช็คว่ากรอกข้อมูลมาครบไหม
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Please provide username and password' });
-  }
-
-  // Test Case 1 & 2: ตรวจสอบ Username และ Password
-  // (เวอร์ชันนี้จำลองการเช็ค Hardcode ไปก่อน อนาคตค่อยต่อ Database)
-  if (username === 'doctor_somchai' && password === 'password123') {
-    // กรณีสำเร็จ 
-    return res.status(200).json({ 
-      message: 'Login successful', 
-      token: 'mock_jwt_token_mhs9lh' // ส่ง Token จำลองกลับไปให้หน้าเว็บ
-    });
-  } else {
-    // กรณีรหัสผิด หรือไม่มีชื่อผู้ใช้
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-});
-// ---------------------------------------------------------
 
 // ---------------------------------------------------------
 // 🚨 Global Error Handler
