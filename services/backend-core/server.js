@@ -6,8 +6,9 @@ const cors = require('cors');
 const diagnosisRoutes = require('./src/routes/diagnosis');
 
 const app = express();
-
-app.use(cors());
+app.use(cors({
+  origin: "*"
+})); // อนุญาตให้ทุกโดเมนเข้าถึง API ได้ (สำหรับการพัฒนา)
 app.use(express.json()); // บรรทัดนี้สำคัญมาก! ทำให้รับข้อมูล Login เป็น JSON ได้
 
 // เชื่อม Route เข้ากับ Path ของระบบ
@@ -58,10 +59,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error', details: err.message || 'Something went wrong' });
 });
 
-// เช็คว่าถ้าโดนเรียกด้วย Jest (Test) จะไม่เปิดพอร์ต 3000 แช่ทิ้งไว้
+// เริ่มเซิร์ฟเวอร์ที่พอร์ต 8080 หรือพอร์ตที่กำหนดใน environment variable
+const PORT = process.env.PORT || 8080;
+
 if (require.main === module) {
-  app.listen(3000, () => {
-    console.log('Server is running on port 3000');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
   });
 }
 

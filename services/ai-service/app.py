@@ -1,7 +1,8 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException , Body
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import io
+import os
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
@@ -22,7 +23,8 @@ app.add_middleware(
 # 🧠 1. โหลดโครงสร้างโมเดลและยัด Weights (state_dict)
 # ---------------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_path = "model/efficientnetb0_alzheimer.pt"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, "model", "efficientnetb0_alzheimer.pt")
 
 try:
     # 1.1 สร้างโครงสร้าง EfficientNetB0 เปล่าๆ ขึ้นมาก่อน (num_classes=4 ตามที่เทรน)
@@ -57,6 +59,10 @@ CLASSES = ['Mild Demented', 'Moderate Demented', 'Non Demented', 'Very Mild Deme
 @app.get("/")
 def read_root():
     return {"status": "AI Service is running", "device": str(device)}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -99,6 +105,7 @@ async def predict(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+print(app.url_map)
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)

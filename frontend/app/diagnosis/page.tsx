@@ -18,58 +18,149 @@ export default function DiagnosisPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+  
     const allowedTypes = ["image/png", "image/jpeg"];
   
+    // ตรวจประเภทไฟล์
     if (!allowedTypes.includes(file.type)) {
-      alert("อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น");
-      e.target.value = ""; 
+      Swal.fire({
+        icon: "error",
+        title: "ไฟล์ไม่ถูกต้อง",
+        text: "อนุญาตเฉพาะไฟล์ .png และ .jpg เท่านั้น",
+        confirmButtonColor: "#ef4444"
+      });
+  
+      e.target.value = "";
       setSelectedFile(null);
       setPreviewUrl(null);
       return;
     }
   
-    const maxSize = 5 * 1024 * 1024; 
+    // ตรวจขนาดไฟล์ (5MB)
+    const maxSize = 5 * 1024 * 1024;
+  
     if (file.size > maxSize) {
-      alert("ไฟล์ต้องไม่เกิน 5MB");
+      Swal.fire({
+        icon: "warning",
+        title: "ไฟล์ใหญ่เกินไป",
+        text: "ไฟล์ต้องมีขนาดไม่เกิน 5MB",
+        confirmButtonColor: "#f59e0b"
+      });
+  
+      e.target.value = "";
       return;
     }
   
+    //  สำเร็จ
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setResult(null);
+  
+    // Toast เล็ก ๆ แจ้งว่าเลือกไฟล์แล้ว
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "อัปโหลดไฟล์เรียบร้อย",
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    });
+  };
+
+  const getConfidence = (result: any) => {
+    if (!result?.prediction || !result?.probabilities) return 0;
+  
+    switch (result.prediction) {
+      case "Non Demented":
+        return result.probabilities.non;
+      case "Very Mild Demented":
+        return result.probabilities.very_mild;
+      case "Mild Demented":
+        return result.probabilities.mild;
+      case "Moderate Demented":
+        return result.probabilities.moderate;
+      default:
+        return 0;
+    }
   };
 
   const handleAnalyze = async () => {
-    if (!selectedFile) return alert("กรุณาอัปโหลดรูปภาพสแกนสมอง (MRI)");
+    if (!selectedFile) {
+      return Swal.fire({
+        icon: "warning",
+        title: "กรุณาอัปโหลดรูปภาพ",
+        text: "โปรดเลือกรูป MRI ก่อนทำการวิเคราะห์",
+        confirmButtonColor: "#3b82f6"
+      });
+    }  
     
     setLoading(true);
-    const formData = new FormData();
-    formData.append('image', selectedFile);
 
+ 
+    Swal.fire({
+      title: "กำลังวิเคราะห์...",
+      timerProgressBar: true,
+      text: "กรุณารอสักครู่",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-      const response = await fetch(`${API_URL}/api/diagnosis`, {
-        method: 'POST',
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+    
+      const response = await fetch(`${API_URL}/predict`, {
+        method: "POST",
         body: formData,
       });
-      
+    
       const data = await response.json();
-      
+    
       if (!response.ok) {
-        throw new Error(data.error || data.details || "เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล");
+        throw new Error(
+          data.error ||
+          data.details ||
+          "เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล"
+        );
       }
-      
+    
       setResult(data);
-    } catch (error: any) {
-      console.error("Error analyzing:", error);
+      Swal.close();
+    
+      const confidence = getConfidence(data);
+    
       Swal.fire({
-        icon: 'error',
-        title: 'Analysis Failed',
-        text: error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์',
-        confirmButtonColor: '#3b82f6'
+        icon: confidence < 0.6 ? "warning" : "success",
+        title: "วิเคราะห์เสร็จแล้ว 🎉",
+        html: `
+          <div style="text-align:left; font-size:14px">
+            <b>ผลลัพธ์:</b> ${data.prediction}<br/>
+            <b>ความมั่นใจ:</b> ${confidence.toFixed(2)}%
+          </div>
+        `,
+        confirmButtonColor: "#3b82f6"
       });
+    
+    } catch (error: any) {
+    
+      console.error("Error analyzing:", error);
+    
+      Swal.fire({
+        icon: "error",
+        title: "Analysis Failed",
+        text:
+          error.message ||
+          "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ หรือเกิดข้อผิดพลาดในการวิเคราะห์",
+        confirmButtonColor: "#ef4444"
+      });
+    
       setResult(null);
+    
     } finally {
       setLoading(false);
     }
