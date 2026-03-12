@@ -32,6 +32,14 @@ const MOCK_USERS = [
     name: 'พว. ทดสอบ ระบบ',
     role: 'NURSE',
     email: 'test_nurse@mdkku.com'
+  },
+  {
+    id: 5,
+    username: 'boss',
+    password: '123',
+    name: 'พว. ทดสอบ ระบบ',
+    role: 'DOCTOR',
+    email: 'test_boss@mdkku.com'
   }
 ];
 

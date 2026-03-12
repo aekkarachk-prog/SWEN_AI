@@ -50,14 +50,26 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-const handleLogin = async (e: React.FormEvent) => {
+  // 🔄 Check for existing session on mount
+  React.useEffect(() => {
+    const savedAuth = localStorage.getItem('alz_auth');
+    if (savedAuth) {
+      try {
+        setAuth(JSON.parse(savedAuth));
+      } catch (e) {
+        localStorage.removeItem('alz_auth');
+      }
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      // 🚀 ยิงไปหา API Backend ใหม่ (เปลี่ยนจาก /api/login เป็น /api/auth/login)
-      const API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || '';
+      // 🚀 ยิงไปหา API Backend (ผ่าน Nginx /api prefix)
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,15 +79,15 @@ const handleLogin = async (e: React.FormEvent) => {
       const data = await res.json();
 
       if (res.ok) {
-        // ถ้าล็อกอินสำเร็จ (API ตอบ 200 OK)
-        setAuth({
+        const newAuth = {
           isAuthenticated: true,
-          // ดึงข้อมูลผู้ใช้จาก API โดยตรง (ไม่ต้อง Hardcode ใน Frontend อีกต่อไป)
           user: data.user, 
-          token: data.token, // 🔑 เอา Token ที่ API ส่งมาไปใช้งาน!
-        });
+          token: data.token,
+        };
+        setAuth(newAuth);
+        // 💾 Save to localStorage
+        localStorage.setItem('alz_auth', JSON.stringify(newAuth));
       } else {
-        // ถ้ารหัสผิด (API ตอบ 400 หรือ 401)
         setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
     } catch (err) {
@@ -86,6 +98,7 @@ const handleLogin = async (e: React.FormEvent) => {
   };
   
   const handleLogout = () => {
+    localStorage.removeItem('alz_auth');
     setAuth({ isAuthenticated: false, user: null, token: null });
     setUsername('');
     setPassword('');

@@ -170,11 +170,12 @@ export default function DiagnosisPage() {
     }
   };
 
-  const handleSaveToPatient = async (patientId: string) => {
+  const handleSaveToPatient = async (patientId: string, patientName?: string) => {
     if (!result || !selectedFile) return;
 
     Swal.fire({
-      title: "กำลังบันทึกข้อมูลไปที่คนไข้...",
+      title: "กำลังบันทึกข้อมูล...",
+      allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
 
@@ -182,13 +183,18 @@ export default function DiagnosisPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
       const confidence = getConfidence(result);
 
-      // Create FormData to upload image AND data
       const uploadData = new FormData();
       uploadData.append("image", selectedFile);
       uploadData.append("id_card", patientId);
+      
+      // ส่งชื่อไปเฉพาะเมื่อต้องสร้างคนไข้ใหม่เท่านั้น
+      if (patientName) {
+        uploadData.append("name", patientName);
+      }
+
       uploadData.append("diagnosis", result.prediction);
-      uploadData.append("notes", `AI Diagnosis Confidence: ${confidence.toFixed(2)}% (Analyzed on ${new Date().toLocaleString()})`);
-      uploadData.append("probability", confidence.toString());
+      uploadData.append("notes", `AI Confidence: ${confidence.toFixed(2)}%`);
+      uploadData.append("probability", (confidence / 100).toString());
 
       const res = await fetch(`${API_URL}/patients/upload`, {
         method: "POST",
@@ -198,40 +204,122 @@ export default function DiagnosisPage() {
       if (res.ok) {
         Swal.fire({
           icon: "success",
-          title: "บันทึกข้อมูลเรียบร้อย",
-          text: `ผลการวิเคราะห์ถูกเพิ่มเข้าสู่ประวัติคนไข้ ${patientId} แล้ว`,
+          title: "บันทึกสำเร็จ ✅",
+          text: `ผลวินิจฉัยและรูปสแกนถูกบันทึกลงใน Slot History ของประวัติ ${patientId} เรียบร้อยแล้ว`,
+          confirmButtonColor: "#10b981"
         });
       } else {
         const err = await res.json();
         throw new Error(err.error || "บันทึกไม่สำเร็จ");
       }
     } catch (error: any) {
-      Swal.fire({
-        icon: "error",
-        title: "เกิดข้อผิดพลาดในการบันทึก",
-        text: error.message,
-      });
+      Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: error.message });
     }
   };
 
   const promptSaveToPatient = async () => {
-    const { value: patientHN } = await Swal.fire({
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+    
+    let patients: any[] = [];
+    try {
+      const res = await fetch(`${API_URL}/patients`);
+      if (res.ok) patients = await res.json();
+    } catch (e) { console.error(e); }
+
+    const { value: formValues } = await Swal.fire({
       title: 'บันทึกประวัติการวินิจฉัย',
-      input: 'text',
-      inputLabel: 'กรุณากรอกรหัส HN หรือหมายเลขบัตรคนไข้',
-      inputPlaceholder: 'ตัวอย่าง: PT-123456',
+      html: `
+        <div class="text-left space-y-4 p-2">
+          <p class="text-xs text-gray-500 mb-2">กรุณาระบุรหัสคนไข้ (HN) ระบบจะค้นหาให้อัตโนมัติ</p>
+          <div class="relative">
+            <input id="swal-id-input" class="swal2-input !m-0 !w-full" placeholder="พิมพ์ HN เช่น PT-123456" autocomplete="off">
+            <div id="autocomplete-list" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto hidden"></div>
+          </div>
+          <div id="new-patient-section" class="hidden animate-in fade-in slide-in-from-top-2">
+            <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 mt-4">ตรวจพบรหัสใหม่! กรุณาระบุชื่อคนไข้</label>
+            <input id="swal-name-input" class="swal2-input !m-0 !w-full !border-blue-200" placeholder="ชื่อ-นามสกุล คนไข้ใหม่">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: 'บันทึกข้อมูล',
       cancelButtonText: 'ยกเลิก',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'กรุณาระบุรหัสคนไข้!'
+      didOpen: () => {
+        const idInput = document.getElementById('swal-id-input') as HTMLInputElement;
+        const nameInput = document.getElementById('swal-name-input') as HTMLInputElement;
+        const listContainer = document.getElementById('autocomplete-list');
+        const newSection = document.getElementById('new-patient-section');
+
+        idInput?.addEventListener('input', (e) => {
+          const val = (e.target as HTMLInputElement).value.toUpperCase();
+          if (!val) {
+            listContainer?.classList.add('hidden');
+            newSection?.classList.add('hidden');
+            return;
+          }
+
+          const matches = patients.filter(p => p.id_card.includes(val) || p.name.includes(val));
+          const exactMatch = patients.find(p => p.id_card === val);
+
+          if (listContainer) {
+            if (matches.length > 0) {
+              listContainer.classList.remove('hidden');
+              listContainer.innerHTML = matches.map(p => `
+                <div class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 patient-item" data-id="${p.id_card}" data-name="${p.name}">
+                  <div class="font-bold text-sm text-gray-800">${p.id_card}</div>
+                  <div class="text-xs text-gray-500">${p.name}</div>
+                </div>
+              `).join('');
+
+              // Add click events to items
+              document.querySelectorAll('.patient-item').forEach(item => {
+                item.addEventListener('click', () => {
+                  const id = item.getAttribute('data-id');
+                  if (idInput && id) {
+                    idInput.value = id;
+                    listContainer.classList.add('hidden');
+                    newSection?.classList.add('hidden');
+                  }
+                });
+              });
+            } else {
+              listContainer.classList.add('hidden');
+            }
+          }
+
+          // Show name input if it's a new ID
+          if (newSection) {
+            newSection.classList.toggle('hidden', !!exactMatch);
+          }
+        });
+
+        // Hide list when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!idInput?.contains(e.target as Node)) {
+            listContainer?.classList.add('hidden');
+          }
+        });
+      },
+      preConfirm: () => {
+        const id = (document.getElementById('swal-id-input') as HTMLInputElement).value.toUpperCase();
+        const name = (document.getElementById('swal-name-input') as HTMLInputElement).value;
+        const exists = patients.some(p => p.id_card === id);
+
+        if (!id) {
+          Swal.showValidationMessage('กรุณาระบุรหัสคนไข้ (HN)');
+          return false;
         }
+        if (!exists && !name) {
+          Swal.showValidationMessage('ไม่พบรหัสคนไข้นี้ กรุณากรอกชื่อเพื่อลงทะเบียนใหม่');
+          return false;
+        }
+        return { id, name: exists ? undefined : name };
       }
     });
 
-    if (patientHN) {
-      handleSaveToPatient(patientHN);
+    if (formValues) {
+      handleSaveToPatient(formValues.id, formValues.name);
     }
   };
 

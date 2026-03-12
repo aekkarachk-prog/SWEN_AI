@@ -126,6 +126,135 @@ export default function HistoryPage() {
     });
   };
 
+  const handleViewFullHistory = () => {
+    if (!patientData || !patientData.history) return;
+
+    Swal.fire({
+      title: `ประวัติการวินิจฉัย: ${patientData.name}`,
+      width: '800px',
+      html: `
+        <div class="space-y-4 max-h-[600px] overflow-y-auto p-4 text-left">
+          ${patientData.history.map((h: any, index: number) => `
+            <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 items-start">
+              <div class="w-32 h-32 bg-white rounded-lg border overflow-hidden flex-shrink-0">
+                <img src="${h.image_url}" class="w-full h-full object-cover" />
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-start mb-2">
+                  <span class="text-[10px] font-bold text-blue-500 uppercase">ครั้งที่ ${index + 1}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${new Date(h.date).toLocaleString()}</span>
+                </div>
+                <p class="text-lg font-bold text-slate-800 mb-1">${h.diagnosis}</p>
+                <p class="text-xs text-slate-500 line-clamp-2">${h.notes || 'ไม่มีหมายเหตุ'}</p>
+                <div class="mt-2 w-full bg-slate-200 rounded-full h-1">
+                  <div class="bg-blue-500 h-full rounded-full" style="width: ${(h.probability || 0) * 100}%"></div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `,
+      confirmButtonText: 'ปิดหน้าต่าง',
+      confirmButtonColor: '#3b82f6'
+    });
+  };
+
+  const handleExport = () => {
+    if (allPatients.length === 0) {
+      Swal.fire('No Data', 'ไม่มีข้อมูลผู้ป่วยเพื่อส่งออก', 'info');
+      return;
+    }
+
+    const headers = ["HN/ID Card", "Name", "Gender", "Latest Diagnosis", "Created At"];
+    const rows = allPatients.map(p => [
+      `"${p.id_card}"`,
+      `"${p.name}"`,
+      `"${p.gender || "N/A"}"`,
+      `"${p.history?.length > 0 ? p.history[p.history.length - 1].diagnosis : "No Data"}"`,
+      `"${new Date(p.created_at).toLocaleDateString()}"`
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `patient_database_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleEditPatient = async () => {
+    if (!patientData) return;
+
+    const { value: formValues } = await Swal.fire({
+      title: 'แก้ไขข้อมูลผู้ป่วย',
+      html: `
+        <div class="text-left space-y-4 p-2">
+          <div class="flex justify-center mb-4">
+            <div class="relative group cursor-pointer" onclick="document.getElementById('swal-edit-pic').click()">
+              <img id="swal-preview-pic" src="${patientData.profile_pic || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name)}" class="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow-md" />
+              <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span class="text-white text-[10px] font-bold">เปลี่ยนรูป</span>
+              </div>
+              <input type="file" id="swal-edit-pic" class="hidden" accept="image/*" onchange="const f = this.files[0]; if(f){ const r = new FileReader(); r.onload=(e)=>{document.getElementById('swal-preview-pic').src=e.target.result; window.swal_new_pic=e.target.result;}; r.readAsDataURL(f); }">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">ชื่อ-นามสกุล</label>
+            <input id="swal-edit-name" class="swal2-input !m-0 !w-full" value="${patientData.name}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">เพศ</label>
+            <select id="swal-edit-gender" class="swal2-input !m-0 !w-full">
+              <option value="male" ${patientData.gender === 'male' ? 'selected' : ''}>ชาย (Male)</option>
+              <option value="female" ${patientData.gender === 'female' ? 'selected' : ''}>หญิง (Female)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">บันทึกจากแพทย์</label>
+            <textarea id="swal-edit-notes" class="swal2-textarea !m-0 !w-full !h-24 !text-sm" placeholder="ระบุรายละเอียดเพิ่มเติม...">${patientData.general_notes || ''}</textarea>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'บันทึกการแก้ไข',
+      cancelButtonText: 'ยกเลิก',
+      didOpen: () => {
+        (window as any).swal_new_pic = null;
+      },
+      preConfirm: () => {
+        return {
+          name: (document.getElementById('swal-edit-name') as HTMLInputElement).value,
+          gender: (document.getElementById('swal-edit-gender') as HTMLSelectElement).value,
+          general_notes: (document.getElementById('swal-edit-notes') as HTMLTextAreaElement).value,
+          profile_pic: (window as any).swal_new_pic || undefined
+        }
+      }
+    });
+
+    if (formValues) {
+      try {
+        const res = await fetch(`${getApiUrl()}/patients/${patientData.id_card}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formValues)
+        });
+
+        if (res.ok) {
+          Swal.fire('สำเร็จ', 'อัปเดตข้อมูลเรียบร้อยแล้ว', 'success');
+          const updated = await res.json();
+          setPatientData(updated);
+          fetchAllPatients();
+        }
+      } catch (e) {
+        Swal.fire('Error', 'ไม่สามารถอัปเดตข้อมูลได้', 'error');
+      }
+    }
+  };
+
   const handleContactAdmin = () => {
     Swal.fire({
       title: '<strong>Contact Administrator</strong>',
@@ -191,7 +320,10 @@ export default function HistoryPage() {
               </button>
             </Link>
 
-            <button className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-200 transition border">
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-200 transition border"
+            >
               <Download size={16} /> Export
             </button>
           </div>
@@ -226,27 +358,45 @@ export default function HistoryPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div className="border-2 border-dashed border-blue-200 rounded-xl p-6 bg-blue-50/50 flex flex-col items-center justify-center min-h-[300px] overflow-hidden">
-                      {latestHistory?.image_url ? (
-                        <img src={latestHistory.image_url} alt="Latest MRI" className="w-full h-full object-contain rounded-lg shadow-sm" />
+                      {/* 👤 แสดงรูปโปรไฟล์คนไข้ */}
+                      {patientData.profile_pic || (patientData.history?.length > 0 && patientData.history[0].image_url) ? (
+                        <img 
+                          src={patientData.profile_pic || patientData.history[0].image_url} 
+                          alt="Patient Profile" 
+                          className="w-full h-full object-contain rounded-lg shadow-sm"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name) + '&background=random';
+                          }}
+                        />
                       ) : (
                         <>
                           <UserCircle2 size={100} className="text-blue-200 mb-4" />
-                          <p className="text-slate-400 text-xs font-bold uppercase">No MRI Image Found</p>
+                          <p className="text-slate-400 text-xs font-bold uppercase">No Profile Picture</p>
                         </>
                       )}
                     </div>
                     <div className="flex gap-2">
-                        <button className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition">View Full History</button>
+                        <button onClick={handleViewFullHistory} className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition">View Full History</button>
                         <Link href="/diagnosis" className="flex-1"><button className="w-full bg-blue-50 text-blue-700 py-2 rounded-lg text-sm font-bold border border-blue-100 hover:bg-blue-100 transition">New Diagnosis</button></Link>
                     </div>
                   </div>
 
                   <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
-                    <div className="mb-6">
-                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">HN / ID Card</p>
-                        <h3 className="text-3xl font-mono font-bold text-slate-800 tracking-tighter">{patientData.id_card}</h3>
-                        <p className="text-lg font-bold text-slate-600 mt-1">{patientData.name}</p>
-                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-bold">Gender: {patientData.gender || 'Not specified'}</p>
+                    <div className="mb-6 flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">HN / ID Card</p>
+                          <h3 className="text-3xl font-mono font-bold text-slate-800 tracking-tighter">{patientData.id_card}</h3>
+                          <p className="text-lg font-bold text-slate-600 mt-1">{patientData.name}</p>
+                          <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-bold">Gender: {patientData.gender || 'Not specified'}</p>
+                          {patientData.general_notes && (
+                            <div className="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100/50 text-left">
+                              <p className="text-[9px] font-bold text-blue-400 uppercase mb-1">Doctor's Note</p>
+                              <p className="text-xs text-slate-600 leading-relaxed italic">{patientData.general_notes}</p>
+                            </div>
+                          )}
+                          </div>
+
+                        <button onClick={handleEditPatient} className="text-xs font-bold text-blue-600 hover:underline bg-white px-3 py-1 rounded-md border shadow-sm">Edit Profile</button>
                     </div>
                     
                     <div className="space-y-4">
@@ -279,8 +429,12 @@ export default function HistoryPage() {
                   {allPatients.map((p) => (
                     <div key={p._id} className="p-4 hover:bg-blue-50/30 transition flex items-center justify-between group cursor-pointer">
                       <div className="flex items-center gap-4 flex-1" onClick={() => {setSearchQuery(p.id_card); handleSearch({preventDefault: () => {}} as any);}}>
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                          <UserCircle2 size={24} />
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 overflow-hidden">
+                          {p.profile_pic || (p.history?.length > 0 && p.history[0].image_url) ? (
+                            <img src={p.profile_pic || p.history[0].image_url} className="w-full h-full object-cover" />
+                          ) : (
+                            <UserCircle2 size={24} />
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-slate-800 group-hover:text-blue-600 transition">{p.name}</p>

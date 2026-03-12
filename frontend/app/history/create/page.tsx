@@ -37,6 +37,7 @@ export default function CreatePatientPage() {
     lastName: "",
     gender: "",
     phoneNumber: "",
+    notes: "", // 📝 เพิ่มฟิลด์ Note
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,6 +94,7 @@ export default function CreatePatientPage() {
           id_card: patientId,
           name: fullName,
           gender: formData.gender,
+          general_notes: formData.notes, // 📝 ส่ง Note ไปด้วย
         }),
       });
 
@@ -107,7 +109,7 @@ export default function CreatePatientPage() {
         uploadData.append("image", selectedFile);
         uploadData.append("id_card", patientId);
         uploadData.append("name", fullName);
-        uploadData.append("diagnosis", "Initial Scan");
+        uploadData.append("diagnosis", "Initial");
         uploadData.append("notes", "Uploaded during registration");
 
         const uploadRes = await fetch(`${API_URL}/patients/upload`, {
@@ -288,16 +290,16 @@ export default function CreatePatientPage() {
                 </h3>
 
                 <div className="space-y-6 flex-1">
-                  {/* ID Field (Read Only) */}
+                  {/* ID Field (Editable) */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Patient ID (Auto Generated)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Patient ID (Auto Generated / Editable)</label>
                     <div className="relative">
                       <Fingerprint size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
                       <input 
                         type="text" 
-                        readOnly 
                         value={patientId}
-                        className="w-full bg-blue-50/50 border border-blue-100 p-4 pl-12 rounded-2xl font-mono font-bold text-blue-600 outline-none" 
+                        onChange={(e) => setPatientId(e.target.value)}
+                        className="w-full bg-blue-50/50 border border-blue-100 p-4 pl-12 rounded-2xl font-mono font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500/20" 
                       />
                     </div>
                   </div>
@@ -357,6 +359,17 @@ export default function CreatePatientPage() {
                         className="w-full bg-white border border-slate-200 p-4 pl-12 rounded-2xl focus:ring-2 focus:ring-blue-500/20 outline-none transition font-medium text-slate-700" 
                       />
                     </div>
+                  </div>
+
+                  {/* 📝 Doctor's Note Field */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">บันทึกจากแพทย์ (Doctor's Note)</label>
+                    <textarea 
+                      name="notes"
+                      placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับคนไข้..."
+                      onChange={(e: any) => handleChange(e)}
+                      className="w-full bg-white border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500/20 outline-none transition font-medium text-slate-700 min-h-[120px] resize-none"
+                    ></textarea>
                   </div>
                 </div>
 
