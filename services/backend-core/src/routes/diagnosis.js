@@ -4,14 +4,11 @@ const axios = require('axios');
 const FormData = require('form-data');
 const router = express.Router();
 
-// ตั้งค่า Multer สำหรับรับไฟล์ไว้ใน Memory (เพื่อส่งต่อได้ทันทีโดยไม่ต้องเซฟลงดิสก์)
-const storage = multer.memoryStorage();
-
-
+// ตั้งค่า Multer สำหรับรับไฟล์ไว้ใน Memory
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024
+    fileSize: 5 * 1024 * 1024 // 🛡️ Security: Limit file size to 5MB
   },
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = ["image/png", "image/jpeg"];
@@ -34,7 +31,7 @@ const upload = multer({
 });
 
 // รับ POST Request ที่ /api/diagnosis
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Please upload an image file' });
@@ -43,17 +40,14 @@ router.post('/', upload.single('image'), async (req, res) => {
     // สร้าง FormData เพื่อเตรียมส่งต่อไปยัง ai-service
     const formData = new FormData();
     formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
+      filename: req.file.originalname.replace(/[^a-zA-Z0-9.]/g, ''), // 🛡️ Security: Sanitize filename
       contentType: req.file.mimetype,
     });
 
-    // ส่งไฟล์ไปให้ ai-service ที่พอร์ต 5000 (ชื่อโฮสต์ 'ai-service' มาจาก Docker network)
-    // ถ้าคุณรันแยกโดยไม่ใช้ Docker ให้เปลี่ยน 'ai-service' เป็น 'localhost'
-    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://svc-ai:5000';
+    // AI_SERVICE_URL จาก environment 
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:8080/predict';
 
-    const response = await axios.post(`${AI_SERVICE_URL}/predict`, data);
-    
-    console.log('Forwarding image to AI Service...');
+    console.log(`Forwarding image to AI Service`); // Obscured full URL in generic logs
     
     const aiResponse = await axios.post(aiServiceUrl, formData, {
       headers: {
@@ -61,24 +55,23 @@ router.post('/', upload.single('image'), async (req, res) => {
       },
     });
 
-    // ส่งผลลัพธ์จาก AI กลับไปให้ Frontend
     res.json(aiResponse.data);
-    console.log("File received and processed:", req.file.originalname);
+    console.log("AI Prediction successful:", aiResponse.data.prediction);
 
   } catch (error) {
     console.error('Error in diagnosis route:', error.message);
     
-    // ถ้า error มาจาก axios (AI Service) ให้ส่ง status code และ message ตามนั้น
+    // 🛡️ Security: Mask internal error stack traces
     if (error.response) {
       return res.status(error.response.status).json({
         error: 'AI Service Error',
-        details: error.response.data.detail || error.response.data.error || error.message
+        details: 'The AI Service encountered an error processing the request.'
       });
     }
 
     res.status(500).json({ 
       error: 'Failed to process diagnosis',
-      details: error.message 
+      details: 'Internal Server Error' 
     });
   }
 });

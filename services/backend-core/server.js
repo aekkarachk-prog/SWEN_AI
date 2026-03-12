@@ -2,64 +2,43 @@
 const express = require('express');
 const cors = require('cors');
 
-// ดึง Route ที่เพื่อนเขียนไว้มาใช้งาน
 const diagnosisRoutes = require('./src/routes/diagnosis');
+const authRoutes = require('./src/routes/auth');
+const userRoutes = require('./src/routes/user');
 
 const app = express();
-app.use(cors({
-  origin: "*"
-})); // อนุญาตให้ทุกโดเมนเข้าถึง API ได้ (สำหรับการพัฒนา)
-app.use(express.json()); // บรรทัดนี้สำคัญมาก! ทำให้รับข้อมูล Login เป็น JSON ได้
 
-// เชื่อม Route เข้ากับ Path ของระบบ
+// 🛡️ Security: Hide Express stack info
+app.disable('x-powered-by');
+
+app.use(cors({ origin: "*" })); 
+
+// 🛡️ Security: Restrict payload size to prevent DoS
+app.use(express.json({ limit: '1mb' })); 
+
 app.use('/api/diagnosis', diagnosisRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 
-// หน้าแรกเอาไว้เช็ค Health
 app.get('/', (req, res) => {
-  res.json({ message: "Backend Core is running!" });
+  res.json({ message: "Backend Core API is running!" });
 });
 
 // ---------------------------------------------------------
-// 🔐 ระบบ Login (พนักงานเฝ้าประตู)
-// ---------------------------------------------------------
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-
-  // Test Case 3: เช็คว่ากรอกข้อมูลมาครบไหม
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Please provide username and password' });
-  }
-
-  // Test Case 1 & 2: ตรวจสอบ Username และ Password
-  // (เวอร์ชันนี้จำลองการเช็ค Hardcode ไปก่อน อนาคตค่อยต่อ Database)
-  if (username === 'doctor_somchai' && password === 'password123') {
-    // กรณีสำเร็จ 
-    return res.status(200).json({ 
-      message: 'Login successful', 
-      token: 'mock_jwt_token_mhs9lh' // ส่ง Token จำลองกลับไปให้หน้าเว็บ
-    });
-  } else {
-    // กรณีรหัสผิด หรือไม่มีชื่อผู้ใช้
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-});
-// ---------------------------------------------------------
-
-// ---------------------------------------------------------
-// 🚨 Global Error Handler
+// 🚨 Global Error Handler (Security Hardened)
 // ---------------------------------------------------------
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err.message || err);
+  console.error('Unhandled Server Error:', err); // Log internally
   
-  // จัดการ Error จาก Multer (เช่น ไฟล์ใหญ่เกิน)
+  // Handling standard errors safely without exposing internal paths/stack
   if (err instanceof require('multer').MulterError || err.message.includes('Invalid file')) {
-    return res.status(400).json({ error: 'File upload error', details: err.message });
+    return res.status(400).json({ error: 'File validation failed or size exceeded limit.' });
   }
 
-  res.status(500).json({ error: 'Internal Server Error', details: err.message || 'Something went wrong' });
+  // Generic response to avoid Information Disclosure
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// เริ่มเซิร์ฟเวอร์ที่พอร์ต 8080 หรือพอร์ตที่กำหนดใน environment variable
 const PORT = process.env.PORT || 8080;
 
 if (require.main === module) {
@@ -68,5 +47,4 @@ if (require.main === module) {
   });
 }
 
-// ต้องส่งออก app เสมอ เพื่อให้เทสต์ดึงไปใช้ได้
 module.exports = app;

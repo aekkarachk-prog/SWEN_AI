@@ -20,12 +20,14 @@ services:
       context: ./services/backend-core
     container_name: alzheimer-backend
     restart: unless-stopped
+    depends_on:
+      - ai-service
     volumes:
       - ./services/backend-core:/app
       - /app/node_modules
     environment:
       - PORT=3000
-      - AI_SERVICE_URL=http://ai-service:5000/predict
+      - AI_SERVICE_URL=http://ai-service:8080/predict
     networks:
       - app-network
 
@@ -40,7 +42,51 @@ services:
     networks:
       - app-network
 
-  # 4. Nginx (Reverse Proxy)
+  # 4. Patient Service (Node.js) - New Microservice
+  patient-service:
+    build:
+      context: ./services/patient-service
+    container_name: alzheimer-patient-service
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/alzheimer_db
+    depends_on:
+      - mongodb
+    volumes:
+      - ./services/patient-service:/app
+      - /app/node_modules
+      - patient_uploads:/app/uploads
+    networks:
+      - app-network
+
+  # 5. MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: alzheimer-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  # 6. Mongo Express (Database GUI)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: alzheimer-mongo-gui
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  # 7. Nginx (Reverse Proxy)
   nginx:
     image: nginx:alpine
     container_name: alzheimer-nginx
@@ -52,6 +98,7 @@ services:
     depends_on:
       - frontend
       - backend-core
+      - patient-service
     networks:
       - app-network
 
@@ -59,3 +106,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  mongodb_data:
+  patient_uploads:
