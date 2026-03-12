@@ -15,6 +15,59 @@ export default function HistoryPage() {
   const [allPatients, setAllPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [userName, setUserName] = useState("Loading...");
+  const [isOnline, setIsOnline] = useState(true);
+
+  React.useEffect(() => {
+    const savedAuth = localStorage.getItem('alz_auth');
+    if (savedAuth) {
+      try {
+        const authData = JSON.parse(savedAuth);
+        setUserName(authData.user?.name || "Unknown User");
+      } catch (e) {
+        setUserName("Unknown User");
+      }
+    } else {
+      setUserName("Unknown User");
+    }
+
+    // Load and Sync Theme - Explicitly default to light
+    const savedTheme = localStorage.getItem('alz_theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('alz_theme', 'light');
+    }
+
+    // Ping check for online status
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/patients`, { method: "HEAD" });
+        setIsOnline(res.ok);
+      } catch (e) {
+        setIsOnline(false);
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === allPatients.length && allPatients.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allPatients.map(p => p.id_card));
+    }
+  };
 
   // 🛠️ Helper สำหรับสร้าง API_URL
   const getApiUrl = () => {
@@ -41,6 +94,7 @@ export default function HistoryPage() {
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
+    const isDark = document.documentElement.classList.contains('dark');
     e.preventDefault();
     if (!searchQuery.trim()) {
       setIsSearching(false);
@@ -62,7 +116,12 @@ export default function HistoryPage() {
           icon: "error",
           title: "ไม่พบข้อมูล",
           text: `ไม่พบผู้ป่วยที่มีหมายเลข HN: ${searchQuery}`,
-          confirmButtonColor: "#ef4444"
+          confirmButtonColor: "#ef4444",
+          customClass: {
+            popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+            title: isDark ? 'text-white' : '',
+            htmlContainer: isDark ? 'text-slate-300' : ''
+          }
         });
         setPatientData(null);
       }
@@ -72,7 +131,12 @@ export default function HistoryPage() {
         icon: "error",
         title: "เกิดข้อผิดพลาด",
         text: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์",
-        confirmButtonColor: "#ef4444"
+        confirmButtonColor: "#ef4444",
+        customClass: {
+          popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+          title: isDark ? 'text-white' : '',
+          htmlContainer: isDark ? 'text-slate-300' : ''
+        }
       });
     } finally {
       setLoading(false);
@@ -82,6 +146,7 @@ export default function HistoryPage() {
   const latestHistory = patientData?.history?.[patientData.history.length - 1];
 
   const handleDelete = async (id_card: string) => {
+    const isDark = document.documentElement.classList.contains('dark');
     const result = await Swal.fire({
       title: 'คุณแน่ใจหรือไม่?',
       text: "การลบข้อมูลนี้จะไม่สามารถเรียกคืนได้ และรูปภาพที่เกี่ยวข้องจะถูกลบทั้งหมด!",
@@ -90,7 +155,12 @@ export default function HistoryPage() {
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
       confirmButtonText: 'ใช่, ลบเลย!',
-      cancelButtonText: 'ยกเลิก'
+      cancelButtonText: 'ยกเลิก',
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      }
     });
 
     if (result.isConfirmed) {
@@ -100,7 +170,16 @@ export default function HistoryPage() {
         });
 
         if (res.ok) {
-          Swal.fire('ลบสำเร็จ!', 'ข้อมูลผู้ป่วยถูกลบออกจากระบบแล้ว', 'success');
+          Swal.fire({
+            icon: 'success',
+            title: 'ลบสำเร็จ!',
+            text: 'ข้อมูลผู้ป่วยถูกลบออกจากระบบแล้ว',
+            customClass: {
+              popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+              title: isDark ? 'text-white' : '',
+              htmlContainer: isDark ? 'text-slate-300' : ''
+            }
+          });
           // รีเฟรชข้อมูล
           fetchAllPatients();
           setIsSearching(false);
@@ -109,18 +188,33 @@ export default function HistoryPage() {
           throw new Error("Delete failed");
         }
       } catch (error) {
-        Swal.fire('Error!', 'ไม่สามารถลบข้อมูลได้', 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: 'ไม่สามารถลบข้อมูลได้',
+          customClass: {
+            popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+            title: isDark ? 'text-white' : '',
+            htmlContainer: isDark ? 'text-slate-300' : ''
+          }
+        });
       }
     }
   };
 
   const handleLogout = () => {
+    const isDark = document.documentElement.classList.contains('dark');
     localStorage.removeItem('alz_auth');
     Swal.fire({
       title: 'ออกจากระบบสำเร็จ',
       icon: 'success',
       timer: 1500,
-      showConfirmButton: false
+      showConfirmButton: false,
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      }
     }).then(() => {
       window.location.href = "/";
     });
@@ -128,6 +222,7 @@ export default function HistoryPage() {
 
   const handleViewFullHistory = () => {
     if (!patientData || !patientData.history) return;
+    const isDark = document.documentElement.classList.contains('dark');
 
     Swal.fire({
       title: `ประวัติการวินิจฉัย: ${patientData.name}`,
@@ -135,8 +230,8 @@ export default function HistoryPage() {
       html: `
         <div class="space-y-4 max-h-[600px] overflow-y-auto p-4 text-left">
           ${patientData.history.map((h: any, index: number) => `
-            <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 items-start">
-              <div class="w-32 h-32 bg-white rounded-lg border overflow-hidden flex-shrink-0">
+            <div class="flex gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 items-start">
+              <div class="w-32 h-32 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-700 overflow-hidden flex-shrink-0">
                 <img src="${h.image_url}" class="w-full h-full object-cover" />
               </div>
               <div class="flex-1">
@@ -144,9 +239,9 @@ export default function HistoryPage() {
                   <span class="text-[10px] font-bold text-blue-500 uppercase">ครั้งที่ ${index + 1}</span>
                   <span class="text-[10px] text-slate-400 font-mono">${new Date(h.date).toLocaleString()}</span>
                 </div>
-                <p class="text-lg font-bold text-slate-800 mb-1">${h.diagnosis}</p>
-                <p class="text-xs text-slate-500 line-clamp-2">${h.notes || 'ไม่มีหมายเหตุ'}</p>
-                <div class="mt-2 w-full bg-slate-200 rounded-full h-1">
+                <p class="text-lg font-bold text-slate-800 dark:text-white mb-1">${h.diagnosis}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">${h.notes || 'ไม่มีหมายเหตุ'}</p>
+                <div class="mt-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1">
                   <div class="bg-blue-500 h-full rounded-full" style="width: ${(h.probability || 0) * 100}%"></div>
                 </div>
               </div>
@@ -155,18 +250,73 @@ export default function HistoryPage() {
         </div>
       `,
       confirmButtonText: 'ปิดหน้าต่าง',
-      confirmButtonColor: '#3b82f6'
+      confirmButtonColor: '#3b82f6',
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      }
     });
   };
 
   const handleExport = () => {
-    if (allPatients.length === 0) {
-      Swal.fire('No Data', 'ไม่มีข้อมูลผู้ป่วยเพื่อส่งออก', 'info');
+    const isDark = document.documentElement.classList.contains('dark');
+    let patientsToExport = [];
+    let filename = `patient_data_${new Date().toISOString().split('T')[0]}`;
+
+    if (selectedIds.length > 0) {
+      patientsToExport = allPatients.filter(p => selectedIds.includes(p.id_card));
+      filename = `selected_patients_${new Date().toISOString().split('T')[0]}`;
+    } else if (isSearching && patientData) {
+      patientsToExport = [patientData];
+      filename = `patient_${patientData.id_card}_${new Date().toISOString().split('T')[0]}`;
+    } else {
+      patientsToExport = allPatients;
+    }
+
+    if (patientsToExport.length === 0) {
+      Swal.fire({
+        title: 'No Data', 
+        text: 'ไม่มีข้อมูลผู้ป่วยเพื่อส่งออก', 
+        icon: 'info',
+        customClass: {
+          popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+          title: isDark ? 'text-white' : '',
+          htmlContainer: isDark ? 'text-slate-300' : ''
+        }
+      });
       return;
     }
 
+    // If exporting all without selection, maybe confirm
+    if (selectedIds.length === 0 && !isSearching) {
+      Swal.fire({
+        title: 'ส่งออกข้อมูลทั้งหมด?',
+        text: `คุณกำลังจะส่งออกข้อมูลผู้ป่วยทั้งหมดจำนวน ${allPatients.length} รายการ`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันส่งออกทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#3b82f6',
+        customClass: {
+          popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+          title: isDark ? 'text-white' : '',
+          htmlContainer: isDark ? 'text-slate-300' : ''
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          generateCsv(patientsToExport, filename);
+        }
+      });
+    } else {
+      generateCsv(patientsToExport, filename);
+    }
+  };
+
+  const generateCsv = (data: any[], filename: string) => {
+    const isDark = document.documentElement.classList.contains('dark');
     const headers = ["HN/ID Card", "Name", "Gender", "Latest Diagnosis", "Created At"];
-    const rows = allPatients.map(p => [
+    const rows = data.map(p => [
       `"${p.id_card}"`,
       `"${p.name}"`,
       `"${p.gender || "N/A"}"`,
@@ -179,14 +329,28 @@ export default function HistoryPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `patient_database_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `${filename}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'ส่งออกสำเร็จ',
+      text: `ส่งออกข้อมูลจำนวน ${data.length} รายการเรียบร้อยแล้ว`,
+      timer: 2000,
+      showConfirmButton: false,
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      }
+    });
   };
 
   const handleEditPatient = async () => {
     if (!patientData) return;
+    const isDark = document.documentElement.classList.contains('dark');
 
     const { value: formValues } = await Swal.fire({
       title: 'แก้ไขข้อมูลผู้ป่วย',
@@ -194,7 +358,7 @@ export default function HistoryPage() {
         <div class="text-left space-y-4 p-2">
           <div class="flex justify-center mb-4">
             <div class="relative group cursor-pointer" onclick="document.getElementById('swal-edit-pic').click()">
-              <img id="swal-preview-pic" src="${patientData.profile_pic || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name)}" class="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow-md" />
+              <img id="swal-preview-pic" src="${patientData.profile_pic || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name)}" class="w-24 h-24 rounded-full object-cover border-4 border-blue-100 dark:border-slate-700 shadow-md" />
               <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <span class="text-white text-[10px] font-bold">เปลี่ยนรูป</span>
               </div>
@@ -203,18 +367,18 @@ export default function HistoryPage() {
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">ชื่อ-นามสกุล</label>
-            <input id="swal-edit-name" class="swal2-input !m-0 !w-full" value="${patientData.name}">
+            <input id="swal-edit-name" class="swal2-input !m-0 !w-full ${isDark ? '!bg-slate-800 !text-white !border-slate-700' : ''}" value="${patientData.name}">
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">เพศ</label>
-            <select id="swal-edit-gender" class="swal2-input !m-0 !w-full">
+            <select id="swal-edit-gender" class="swal2-input !m-0 !w-full ${isDark ? '!bg-slate-800 !text-white !border-slate-700' : ''}">
               <option value="male" ${patientData.gender === 'male' ? 'selected' : ''}>ชาย (Male)</option>
               <option value="female" ${patientData.gender === 'female' ? 'selected' : ''}>หญิง (Female)</option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">บันทึกจากแพทย์</label>
-            <textarea id="swal-edit-notes" class="swal2-textarea !m-0 !w-full !h-24 !text-sm" placeholder="ระบุรายละเอียดเพิ่มเติม...">${patientData.general_notes || ''}</textarea>
+            <textarea id="swal-edit-notes" class="swal2-textarea !m-0 !w-full !h-24 !text-sm ${isDark ? '!bg-slate-800 !text-white !border-slate-700' : ''}" placeholder="ระบุรายละเอียดเพิ่มเติม...">${patientData.general_notes || ''}</textarea>
           </div>
         </div>
       `,
@@ -222,6 +386,11 @@ export default function HistoryPage() {
       showCancelButton: true,
       confirmButtonText: 'บันทึกการแก้ไข',
       cancelButtonText: 'ยกเลิก',
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      },
       didOpen: () => {
         (window as any).swal_new_pic = null;
       },
@@ -244,18 +413,37 @@ export default function HistoryPage() {
         });
 
         if (res.ok) {
-          Swal.fire('สำเร็จ', 'อัปเดตข้อมูลเรียบร้อยแล้ว', 'success');
+          Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ',
+            text: 'อัปเดตข้อมูลเรียบร้อยแล้ว',
+            customClass: {
+              popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+              title: isDark ? 'text-white' : '',
+              htmlContainer: isDark ? 'text-slate-300' : ''
+            }
+          });
           const updated = await res.json();
           setPatientData(updated);
           fetchAllPatients();
         }
       } catch (e) {
-        Swal.fire('Error', 'ไม่สามารถอัปเดตข้อมูลได้', 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'ไม่สามารถอัปเดตข้อมูลได้',
+          customClass: {
+            popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+            title: isDark ? 'text-white' : '',
+            htmlContainer: isDark ? 'text-slate-300' : ''
+          }
+        });
       }
     }
   };
 
   const handleContactAdmin = () => {
+    const isDark = document.documentElement.classList.contains('dark');
     Swal.fire({
       title: '<strong>Contact Administrator</strong>',
       icon: 'info',
@@ -269,28 +457,35 @@ export default function HistoryPage() {
       focusConfirm: false,
       confirmButtonText: 'Close',
       confirmButtonColor: '#3b82f6',
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      }
     });
   };
 
   return (
-    <div className="flex h-screen bg-[#f8fafc]">
+    <div className="flex h-screen bg-[#f8fafc] dark:bg-slate-950 transition-colors duration-300">
       {/* --- SIDEBAR --- */}
-      <aside className="w-64 bg-white border-r flex flex-col shadow-sm">
+      <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-blue-600 flex items-center gap-2">
-            <Stethoscope size={24} /> Dr. Bigboss สุดหล่อ
+          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+            <Stethoscope size={24} /> {userName}
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/"><NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" /></Link>
           <Link href="/history"><NavItem icon={<Users size={20}/>} label="Patients" active/></Link>
           <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
-          <NavItem icon={<Settings size={20}/>} label="Setting" />
+          <Link href="/settings">
+            <NavItem icon={<Settings size={20}/>} label="Setting" />
+          </Link>
           <div onClick={handleContactAdmin}>
             <NavItem icon={<MessageSquare size={20}/>} label="Contact Admin" />
           </div>
         </nav>
-        <div className="p-4 border-t text-nowrap">
+        <div className="p-4 border-t dark:border-slate-800 text-nowrap">
           <button 
             onClick={handleLogout}
             className="flex items-center gap-3 text-slate-400 hover:text-red-500 w-full px-4 py-2 transition text-sm font-medium"
@@ -302,27 +497,31 @@ export default function HistoryPage() {
 
       {/* --- MAIN CONTENT --- */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white border-b flex items-center justify-between px-8 text-nowrap">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b dark:border-slate-800 flex items-center justify-between px-8 text-nowrap">
           <div className="flex items-center gap-4">
             <Link href="/" className="text-gray-400 hover:text-blue-600 transition"><ArrowLeft size={20} /></Link>
-            <span className="text-gray-400 text-sm">Patient Database / Search</span>
+            <span className="text-gray-400 dark:text-slate-500 text-sm">Patient Database / Search</span>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 mr-2">
-              <span className="text-sm font-medium">Status:</span>
-              <span className="text-green-500 flex items-center gap-1.5 text-sm">Online <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div></span>
+              <span className="text-sm font-medium dark:text-slate-400">Status:</span>
+              {isOnline ? (
+                <span className="text-green-500 flex items-center gap-1.5 text-sm">Online <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div></span>
+              ) : (
+                <span className="text-red-500 flex items-center gap-1.5 text-sm">Offline <div className="w-2 h-2 bg-red-500 rounded-full"></div></span>
+              )}
             </div>
 
             <Link href="/history/create">
-              <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm">
+              <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm border border-blue-500">
                 <PlusCircle size={16} /> ลงทะเบียนผู้ป่วยใหม่
               </button>
             </Link>
 
             <button 
               onClick={handleExport}
-              className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-200 transition border"
+              className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition border dark:border-slate-700 text-slate-600 dark:text-slate-300"
             >
               <Download size={16} /> Export
             </button>
@@ -331,25 +530,25 @@ export default function HistoryPage() {
 
         <div className="p-8 overflow-y-auto">
           <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
               <form onSubmit={handleSearch} className="flex gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                   <input type="text" placeholder="ใส่หมายเลข HN หรือ ID Card (เช่น PT-123456)..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition dark:text-white" />
                 </div>
-                <button type="submit" disabled={loading} className="bg-[#1e3a8a] text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-800 transition shadow-md disabled:bg-slate-400">
+                <button type="submit" disabled={loading} className="bg-[#1e3a8a] dark:bg-blue-700 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-800 dark:hover:bg-blue-600 transition shadow-md disabled:bg-slate-400">
                   {loading ? "Searching..." : "Search"}
                 </button>
               </form>
             </div>
 
             {isSearching && patientData ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-in fade-in zoom-in duration-300">
-                <div className="flex justify-between items-center mb-8 border-b pb-4 text-nowrap">
-                  <h2 className="text-2xl font-bold text-slate-800">Patient Record Found</h2>
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 animate-in fade-in zoom-in duration-300">
+                <div className="flex justify-between items-center mb-8 border-b dark:border-slate-800 pb-4 text-nowrap">
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Patient Record Found</h2>
                   <div className="flex gap-4 items-center">
-                    <button onClick={() => handleDelete(patientData.id_card)} className="flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">
+                    <button onClick={() => handleDelete(patientData.id_card)} className="flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition">
                       <Trash2 size={16} /> Delete Patient
                     </button>
                     <button onClick={() => {setIsSearching(false); setPatientData(null); setSearchQuery('');}} className="text-sm text-slate-400 hover:underline">Clear Result</button>
@@ -357,7 +556,7 @@ export default function HistoryPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    <div className="border-2 border-dashed border-blue-200 rounded-xl p-6 bg-blue-50/50 flex flex-col items-center justify-center min-h-[300px] overflow-hidden">
+                    <div className="border-2 border-dashed border-blue-200 dark:border-blue-900/50 rounded-xl p-6 bg-blue-50/50 dark:bg-blue-900/10 flex flex-col items-center justify-center min-h-[300px] overflow-hidden">
                       {/* 👤 แสดงรูปโปรไฟล์คนไข้ */}
                       {patientData.profile_pic || (patientData.history?.length > 0 && patientData.history[0].image_url) ? (
                         <img 
@@ -370,47 +569,47 @@ export default function HistoryPage() {
                         />
                       ) : (
                         <>
-                          <UserCircle2 size={100} className="text-blue-200 mb-4" />
+                          <UserCircle2 size={100} className="text-blue-200 dark:text-blue-900 mb-4" />
                           <p className="text-slate-400 text-xs font-bold uppercase">No Profile Picture</p>
                         </>
                       )}
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={handleViewFullHistory} className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition">View Full History</button>
-                        <Link href="/diagnosis" className="flex-1"><button className="w-full bg-blue-50 text-blue-700 py-2 rounded-lg text-sm font-bold border border-blue-100 hover:bg-blue-100 transition">New Diagnosis</button></Link>
+                        <button onClick={handleViewFullHistory} className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">View Full History</button>
+                        <Link href="/diagnosis" className="flex-1"><button className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 py-2 rounded-lg text-sm font-bold border border-blue-100 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition">New Diagnosis</button></Link>
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
+                  <div className="bg-slate-50 dark:bg-slate-950/50 rounded-xl p-6 border border-slate-100 dark:border-slate-800">
                     <div className="mb-6 flex justify-between items-start">
                         <div>
                           <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">HN / ID Card</p>
-                          <h3 className="text-3xl font-mono font-bold text-slate-800 tracking-tighter">{patientData.id_card}</h3>
-                          <p className="text-lg font-bold text-slate-600 mt-1">{patientData.name}</p>
+                          <h3 className="text-3xl font-mono font-bold text-slate-800 dark:text-white tracking-tighter">{patientData.id_card}</h3>
+                          <p className="text-lg font-bold text-slate-600 dark:text-slate-300 mt-1">{patientData.name}</p>
                           <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-bold">Gender: {patientData.gender || 'Not specified'}</p>
                           {patientData.general_notes && (
-                            <div className="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100/50 text-left">
+                            <div className="mt-4 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100/50 dark:border-blue-900/30 text-left">
                               <p className="text-[9px] font-bold text-blue-400 uppercase mb-1">Doctor's Note</p>
-                              <p className="text-xs text-slate-600 leading-relaxed italic">{patientData.general_notes}</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">{patientData.general_notes}</p>
                             </div>
                           )}
                           </div>
 
-                        <button onClick={handleEditPatient} className="text-xs font-bold text-blue-600 hover:underline bg-white px-3 py-1 rounded-md border shadow-sm">Edit Profile</button>
+                        <button onClick={handleEditPatient} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline bg-white dark:bg-slate-900 px-3 py-1 rounded-md border dark:border-slate-800 shadow-sm">Edit Profile</button>
                     </div>
                     
                     <div className="space-y-4">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase border-b pb-1">Latest Analysis Result</p>
-                      <div className="bg-white p-4 rounded-xl border border-blue-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase border-b dark:border-slate-800 pb-1">Latest Analysis Result</p>
+                      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
                         <p className="text-xs text-slate-500 mb-1">Diagnosis:</p>
-                        <p className="text-xl font-bold text-blue-600">{latestHistory?.diagnosis || 'No previous scans'}</p>
+                        <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{latestHistory?.diagnosis || 'No previous scans'}</p>
                         {latestHistory?.notes && (
                           <p className="text-[10px] text-slate-400 mt-2 italic">Notes: {latestHistory.notes}</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-slate-200 text-[10px] flex justify-between font-bold text-slate-400">
+                    <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 text-[10px] flex justify-between font-bold text-slate-400">
                         <span>Latest Update: {latestHistory ? new Date(latestHistory.date).toLocaleDateString() : 'Never'}</span>
                         <span className="text-emerald-500 flex items-center gap-1"><CheckCircle2 size={12}/> Registered</span>
                     </div>
@@ -418,39 +617,60 @@ export default function HistoryPage() {
                 </div>
               </div>
             ) : !isSearching && allPatients.length > 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b bg-slate-50/50">
-                  <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                    <Users size={18} className="text-blue-500" /> 
-                    รายชื่อผู้ป่วยที่ลงทะเบียนทั้งหมด ({allPatients.length})
-                  </h3>
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      checked={selectedIds.length === allPatients.length && allPatients.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <Users size={18} className="text-blue-500" /> 
+                      รายชื่อผู้ป่วยที่ลงทะเบียนทั้งหมด ({allPatients.length})
+                    </h3>
+                  </div>
+                  {selectedIds.length > 0 && (
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50 animate-in fade-in zoom-in">
+                      เลือกแล้ว {selectedIds.length} คน
+                    </span>
+                  )}
                 </div>
-                <div className="divide-y">
+                <div className="divide-y dark:divide-slate-800">
                   {allPatients.map((p) => (
-                    <div key={p._id} className="p-4 hover:bg-blue-50/30 transition flex items-center justify-between group cursor-pointer">
-                      <div className="flex items-center gap-4 flex-1" onClick={() => {setSearchQuery(p.id_card); handleSearch({preventDefault: () => {}} as any);}}>
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 overflow-hidden">
-                          {p.profile_pic || (p.history?.length > 0 && p.history[0].image_url) ? (
-                            <img src={p.profile_pic || p.history[0].image_url} className="w-full h-full object-cover" />
-                          ) : (
-                            <UserCircle2 size={24} />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800 group-hover:text-blue-600 transition">{p.name}</p>
-                          <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">{p.id_card}</p>
+                    <div key={p._id} className="p-4 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition flex items-center justify-between group cursor-pointer">
+                      <div className="flex items-center gap-4 flex-1">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          checked={selectedIds.includes(p.id_card)}
+                          onChange={(e) => { e.stopPropagation(); toggleSelect(p.id_card); }}
+                        />
+                        <div className="flex items-center gap-4 flex-1" onClick={() => {setSearchQuery(p.id_card); handleSearch({preventDefault: () => {}} as any);}}>
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 overflow-hidden">
+                            {p.profile_pic || (p.history?.length > 0 && p.history[0].image_url) ? (
+                              <img src={p.profile_pic || p.history[0].image_url} className="w-full h-full object-cover" />
+                            ) : (
+                              <UserCircle2 size={24} />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">{p.name}</p>
+                            <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">{p.id_card}</p>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
                         <div className="text-right hidden sm:block">
                           <p className="text-[10px] font-bold text-slate-400 uppercase">Latest Scan</p>
-                          <p className="text-xs font-bold text-slate-600">
+                          <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
                             {p.history?.length > 0 ? p.history[p.history.length-1].diagnosis : 'No Data'}
                           </p>
                         </div>
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleDelete(p.id_card); }}
-                          className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                          className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                           title="Delete Patient"
                         >
                           <Trash2 size={18} />
@@ -461,9 +681,9 @@ export default function HistoryPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 py-24 flex flex-col items-center justify-center text-slate-400">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 py-24 flex flex-col items-center justify-center text-slate-400">
                 <Users size={48} className="opacity-20 mb-4" />
-                <p className="text-xl font-bold text-slate-500">พร้อมค้นหาข้อมูลคนไข้</p>
+                <p className="text-xl font-bold text-slate-500 dark:text-slate-400">พร้อมค้นหาข้อมูลคนไข้</p>
                 <p className="text-sm">กรุณาระบุหมายเลข HN เพื่อดูรายละเอียด หรือเลือกจากรายการด้านล่าง</p>
               </div>
             )}
@@ -477,7 +697,7 @@ export default function HistoryPage() {
 // --- SUB-COMPONENTS ---
 function NavItem({ icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
       {icon} <span className="font-medium text-sm text-nowrap">{label}</span>
     </div>
   );
@@ -490,7 +710,7 @@ function ProbabilityBar({ label, value, highlight = false }: { label: string, va
         <span className={highlight ? "font-bold text-emerald-600 uppercase" : "text-slate-500 font-medium"}>{label}</span>
         <span className={highlight ? "font-bold text-emerald-600" : "font-mono"}>{value}%</span>
       </div>
-      <div className="w-full bg-slate-200 rounded-full h-1.5 relative overflow-hidden">
+      <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 relative overflow-hidden">
         <div className={`h-full absolute left-0 transition-all duration-1000 ${highlight ? 'bg-emerald-500' : 'bg-slate-400'}`} style={{ width: `${value}%` }}></div>
       </div>
     </div>
