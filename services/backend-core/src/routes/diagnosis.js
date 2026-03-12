@@ -46,8 +46,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     });
 
     // AI_SERVICE_URL จาก environment (ควรเป็น http://ai-service:8080/predict ตาม Dockerfile ของ AI)
-    // หมายเหตุ: ใน docker-compose.yml ตั้งไว้เป็น http://ai-service:5000/predict
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:5000/predict';
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:8080/predict';
 
     console.log(`Forwarding image to AI Service: ${aiServiceUrl}`);
     

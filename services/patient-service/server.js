@@ -9,24 +9,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Request Logger สำหรับดีบั๊ก (จะช่วยให้เห็นว่า Path ไหนส่งมาถึงบ้าง)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 const PORT = process.env.PORT || 3001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/alzheimer_db';
 
-// --- Ensure Uploads Directory Exists ---
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)){
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// --- Serve Static Files ---
 app.use('/uploads', express.static(uploadsDir));
 
-// --- MongoDB Connection ---
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB (Patient Service)'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-// --- Patient Model ---
 const patientSchema = new mongoose.Schema({
   id_card: { type: String, required: true, unique: true },
   name: { type: String, required: true },
@@ -44,7 +46,6 @@ const patientSchema = new mongoose.Schema({
 
 const Patient = mongoose.model('Patient', patientSchema);
 
-// --- Multer Configuration ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
@@ -66,16 +67,14 @@ const upload = multer({
   }
 });
 
-// --- API Router ---
-const router = express.Router();
+// --- API Routes (ใช้ Full Path ตรงๆ เพื่อลดความสับสนเรื่อง Prefix) ---
 
-// Health check
-router.get('/health', (req, res) => {
+app.get('/api/patients/health', (req, res) => {
   res.json({ status: "ok", service: "patient-service" });
 });
 
-// 1. Get all patients
-router.get('/', async (req, res) => {
+// 1. Get all
+app.get('/api/patients', async (req, res) => {
   try {
     const patients = await Patient.find();
     res.json(patients);
@@ -84,8 +83,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. Create patient
-router.post('/', async (req, res) => {
+// 2. Create
+app.post('/api/patients', async (req, res) => {
   try {
     const patient = new Patient(req.body);
     await patient.save();
@@ -95,8 +94,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 3. Upload image (MUST be before :id_card)
-router.post('/upload', upload.single('image'), async (req, res) => {
+// 3. Upload (วางไว้ก่อน :id_card)
+app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
   try {
     const { id_card, diagnosis, notes, name, probability } = req.body;
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
@@ -123,7 +122,7 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 });
 
 // 4. Get by ID
-router.get('/:id_card', async (req, res) => {
+app.get('/api/patients/:id_card', async (req, res) => {
   try {
     const patient = await Patient.findOne({ id_card: req.params.id_card });
     if (!patient) return res.status(404).json({ error: 'Not found' });
@@ -134,27 +133,34 @@ router.get('/:id_card', async (req, res) => {
 });
 
 // 5. Delete
-router.delete('/:id_card', async (req, res) => {
+app.delete('/api/patients/:id_card', async (req, res) => {
   try {
+    console.log(`Attempting to delete patient: ${req.params.id_card}`);
     const patient = await Patient.findOneAndDelete({ id_card: req.params.id_card });
-    if (!patient) return res.status(404).json({ error: 'Not found' });
+    
+    if (!patient) {
+      console.log(`Patient ${req.params.id_card} not found in DB`);
+      return res.status(404).json({ error: 'Not found' });
+    }
 
     if (patient.history) {
       patient.history.forEach(h => {
         if (h.image_url) {
-          const filePath = path.join(uploadsDir, path.basename(h.image_url));
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          const fileName = path.basename(h.image_url);
+          const filePath = path.join(uploadsDir, fileName);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`Deleted file: ${filePath}`);
+          }
         }
       });
     }
-    res.json({ message: 'Deleted' });
+    res.json({ message: 'Deleted successfully' });
   } catch (error) {
+    console.error('Delete error:', error);
     res.status(500).json({ error: error.message });
   }
 });
-
-// Mount the router
-app.use('/api/patients', router);
 
 app.listen(PORT, () => {
   console.log(`Patient Service on port ${PORT}`);

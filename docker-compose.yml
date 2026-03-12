@@ -52,6 +52,8 @@ services:
     depends_on:
       - mongodb
     volumes:
+      - ./services/patient-service:/app
+      - /app/node_modules
       - patient_uploads:/app/uploads
     networks:
       - app-network
