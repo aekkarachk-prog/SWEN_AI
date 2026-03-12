@@ -231,7 +231,7 @@ export default function CreatePatientPage() {
         '<div class="text-left space-y-2">' +
         '<p><b>Phone:</b> 043-363-xxx (IT Support)</p>' +
         '<p><b>Email:</b> it-support@mdkku.com</p>' +
-        '<p><b>Office:</b> Building 1, 4th Floor</p>' +
+        '<p><b>Office:</b> 9127, 1th Floor</p>' +
         '</div>',
       showCloseButton: true,
       focusConfirm: false,

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
   Download, CheckCircle2, ArrowLeft, Search, UserCircle2, PlusCircle,
-  MessageSquare, Trash2
+  MessageSquare, Trash2, RotateCcw
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -32,13 +32,13 @@ export default function HistoryPage() {
       setUserName("Unknown User");
     }
 
-    // Load and Sync Theme - Explicitly default to light
+    // Load and Sync Theme - Default to light
     const savedTheme = localStorage.getItem('alz_theme');
     if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('alz_theme', 'light');
+      if (!savedTheme) localStorage.setItem('alz_theme', 'light');
     }
 
     // Ping check for online status
@@ -198,6 +198,59 @@ export default function HistoryPage() {
             htmlContainer: isDark ? 'text-slate-300' : ''
           }
         });
+      }
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!patientData) return;
+    const isDark = document.documentElement.classList.contains('dark');
+
+    const result = await Swal.fire({
+      title: 'รีเซ็ตประวัติการวินิจฉัย?',
+      text: "คุณต้องการลบประวัติ AI ทั้งหมดและเก็บไว้เพียงข้อมูลการลงทะเบียนเริ่มต้นใช่หรือไม่?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'ใช่, รีเซ็ตเลย',
+      cancelButtonText: 'ยกเลิก',
+      customClass: {
+        popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+        title: isDark ? 'text-white' : '',
+        htmlContainer: isDark ? 'text-slate-300' : ''
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setLoading(true);
+        const res = await fetch(`${getApiUrl()}/patients/${patientData.id_card}/clear-history`, {
+          method: 'POST'
+        });
+
+        if (res.ok) {
+          const updatedPatient = await res.json();
+          setPatientData(updatedPatient.patient);
+          Swal.fire({
+            icon: 'success',
+            title: 'รีเซ็ตสำเร็จ',
+            text: 'ล้างประวัติการวินิจฉัยคงเหลือไว้เพียงข้อมูลเริ่มต้น',
+            timer: 2000,
+            showConfirmButton: false,
+            customClass: {
+              popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
+              title: isDark ? 'text-white' : '',
+              htmlContainer: isDark ? 'text-slate-300' : ''
+            }
+          });
+        } else {
+          throw new Error("Clear failed");
+        }
+      } catch (error) {
+        Swal.fire('Error!', 'ไม่สามารถล้างข้อมูลได้', 'error');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -451,7 +504,7 @@ export default function HistoryPage() {
         '<div class="text-left space-y-2">' +
         '<p><b>Phone:</b> 043-363-xxx (IT Support)</p>' +
         '<p><b>Email:</b> it-support@mdkku.com</p>' +
-        '<p><b>Office:</b> Building 1, 4th Floor</p>' +
+        '<p><b>Office:</b> 9127, 1th Floor</p>' +
         '</div>',
       showCloseButton: true,
       focusConfirm: false,
@@ -551,7 +604,6 @@ export default function HistoryPage() {
                     <button onClick={() => handleDelete(patientData.id_card)} className="flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition">
                       <Trash2 size={16} /> Delete Patient
                     </button>
-                    <button onClick={() => {setIsSearching(false); setPatientData(null); setSearchQuery('');}} className="text-sm text-slate-400 hover:underline">Clear Result</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -595,7 +647,14 @@ export default function HistoryPage() {
                           )}
                           </div>
 
-                        <button onClick={handleEditPatient} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline bg-white dark:bg-slate-900 px-3 py-1 rounded-md border dark:border-slate-800 shadow-sm">Edit Profile</button>
+                        <div className="flex flex-col gap-2">
+                          <button onClick={handleEditPatient} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline bg-white dark:bg-slate-900 px-3 py-1 rounded-md border dark:border-slate-800 shadow-sm">Edit Profile</button>
+                          {patientData.history?.length > 1 && (
+                            <button onClick={handleClearHistory} className="text-[10px] font-bold text-red-500 hover:underline bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-md border border-red-100 dark:border-red-900/50 shadow-sm flex items-center gap-1 justify-center">
+                              <RotateCcw size={10} /> Reset History
+                            </button>
+                          )}
+                        </div>
                     </div>
                     
                     <div className="space-y-4">

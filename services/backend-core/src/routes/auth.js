@@ -15,8 +15,9 @@ const generateMockToken = (user) => {
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Please provide username and password' });
+  // 🛡️ Security: Validate input types to prevent NoSQL injection/Prototype Pollution equivalents
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Invalid input format' });
   }
 
   // ค้นหาผู้ใช้จาก "Database"
@@ -35,6 +36,7 @@ router.post('/login', (req, res) => {
       }
     });
   } else {
+    // 🛡️ Security: Use generic error messages for authentication failure
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 });

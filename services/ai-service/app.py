@@ -56,9 +56,12 @@ transform = transforms.Compose([
 # ลำดับคลาสตามตัวแปร class_names ใน Notebook
 CLASSES = ['Mild Demented', 'Moderate Demented', 'Non Demented', 'Very Mild Demented']
 
+# 🛡️ Security: Limit file sizes at the application level as a backup to proxy limits
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
 @app.get("/")
 def read_root():
-    return {"status": "AI Service is running", "device": str(device)}
+    return {"status": "AI Service is running"}
 
 @app.get("/health")
 def health():
@@ -67,11 +70,18 @@ def health():
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded properly. Check server logs.")
+        raise HTTPException(status_code=503, detail="Service Unavailable: Model not loaded properly.")
+
+    # 🛡️ Security: Validate MIME type
+    if file.content_type not in ["image/jpeg", "image/png"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
 
     try:
-        # อ่านไฟล์รูปภาพและแปลงโหมดสีเป็น RGB
+        # อ่านไฟล์รูปภาพและตรวจสอบขนาด
         contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+             raise HTTPException(status_code=413, detail="File too large")
+             
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         
         # แปลงเป็น Tensor และเพิ่มมิติ Batch
@@ -97,14 +107,20 @@ async def predict(file: UploadFile = File(...)):
             "very_mild": round(probabilities[3].item() * 100, 2)
         }
 
+        # 🛡️ Security: Clean the filename to prevent XSS reflection
+        safe_filename = "".join([c for c in file.filename if c.isalnum() or c in ".-_"])
+
         return {
             "prediction": predicted_class,
             "probabilities": prob_dict,
-            "filename": file.filename
+            "filename": safe_filename
         }
-
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # 🛡️ Security: Mask stack traces in production
+        print(f"Internal AI Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error during prediction.")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

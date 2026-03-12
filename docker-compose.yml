@@ -20,6 +20,8 @@ services:
       context: ./services/backend-core
     container_name: alzheimer-backend
     restart: unless-stopped
+    depends_on:
+      - ai-service
     volumes:
       - ./services/backend-core:/app
       - /app/node_modules
@@ -96,6 +98,7 @@ services:
     depends_on:
       - frontend
       - backend-core
+      - patient-service
     networks:
       - app-network
 

@@ -287,7 +287,7 @@ export default function DiagnosisPage() {
       if (res.ok) {
         Swal.fire({
           icon: "success",
-          title: "บันทึกสำเร็จ ✅",
+          title: "บันทึกสำเร็จ",
           text: `ผลวินิจฉัยและรูปสแกนถูกบันทึกลงใน Slot History ของประวัติ ${patientId} เรียบร้อยแล้ว`,
           confirmButtonColor: "#10b981",
           customClass: {

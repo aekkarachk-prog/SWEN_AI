@@ -38,19 +38,20 @@ router.get('/profile', authenticateMockToken, (req, res) => {
 });
 
 // 2. ดึงข้อมูลผู้ใช้โดยใช้ชื่อบัญชี (Username)
-// (เหมาะสำหรับการเรียกใช้ระหว่าง Microservices โดยระบุชื่อบัญชีตรงๆ)
 router.get('/account/:username', (req, res) => {
-  const { username } = req.params;
+  // 🛡️ Security: Explicitly cast to string and sanitize
+  const username = String(req.params.username).trim();
   const user = MOCK_USERS.find(u => u.username === username);
 
   if (user) {
     const { password, ...userWithoutPassword } = user;
     res.json({
-      message: `User data for ${username} found`,
+      message: `User data found`,
       user: userWithoutPassword
     });
   } else {
-    res.status(404).json({ error: `User with account ${username} not found` });
+    // 🛡️ Security: Generic error without reflecting unsanitized input back to the user
+    res.status(404).json({ error: `User not found` });
   }
 });
 
