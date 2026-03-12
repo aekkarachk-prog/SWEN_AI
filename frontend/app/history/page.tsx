@@ -314,7 +314,7 @@ export default function HistoryPage() {
 
   const handleExport = () => {
     const isDark = document.documentElement.classList.contains('dark');
-    let patientsToExport = [];
+    let patientsToExport: any[] = [];
     let filename = `patient_data_${new Date().toISOString().split('T')[0]}`;
 
     if (selectedIds.length > 0) {
