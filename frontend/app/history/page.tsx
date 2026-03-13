@@ -111,6 +111,15 @@ function HistoryContent() {
     fetchAllPatients();
   }, []);
 
+  // 🛠️ Helper สำหรับสร้าง URL รูปภาพแบบเต็ม
+  const getFullImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('data:')) return path;
+    const baseUrl = getApiUrl().replace(/\/api$/, ''); // ลบ /api ออกถ้ามี
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
   const performSearch = async (query: string) => {
     const isDark = document.documentElement.classList.contains('dark');
     if (!query.trim()) {
@@ -313,9 +322,10 @@ function HistoryContent() {
         <div class="space-y-4 max-h-[600px] overflow-y-auto p-4 text-left">
           ${patientData.history.map((h: any, index: number) => `
             <div class="flex gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 items-start">
-              <div class="w-32 h-32 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-700 overflow-hidden flex-shrink-0">
-                <img src="${h.image_url}" class="w-full h-full object-cover" />
+              <div className="w-32 h-32 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-700 overflow-hidden flex-shrink-0">
+                <img src={getFullImageUrl(h.image_url)} className="w-full h-full object-cover" />
               </div>
+
               <div class="flex-1">
                 <div class="flex justify-between items-start mb-2">
                   <span class="text-[10px] font-bold text-blue-500 uppercase">ครั้งที่ ${index + 1}</span>
@@ -438,10 +448,11 @@ function HistoryContent() {
       title: 'แก้ไขข้อมูลผู้ป่วย',
       html: `
         <div class="text-left space-y-4 p-2">
-          <div class="flex justify-center mb-4">
-            <div class="relative group cursor-pointer" onclick="document.getElementById('swal-edit-pic').click()">
-              <img id="swal-preview-pic" src="${patientData.profile_pic || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name)}" class="w-24 h-24 rounded-full object-cover border-4 border-blue-100 dark:border-slate-700 shadow-md" />
+          <div className="flex justify-center mb-4">
+            <div className="relative group cursor-pointer" onclick="document.getElementById('swal-edit-pic').click()">
+              <img id="swal-preview-pic" src="${getFullImageUrl(patientData.profile_pic) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name)}" class="w-24 h-24 rounded-full object-cover border-4 border-blue-100 dark:border-slate-700 shadow-md" />
               <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+
                 <span class="text-white text-[10px] font-bold">เปลี่ยนรูป</span>
               </div>
               <input type="file" id="swal-edit-pic" class="hidden" accept="image/*" onchange="const f = this.files[0]; if(f){ const r = new FileReader(); r.onload=(e)=>{document.getElementById('swal-preview-pic').src=e.target.result; window.swal_new_pic=e.target.result;}; r.readAsDataURL(f); }">
@@ -652,7 +663,7 @@ function HistoryContent() {
                       {/* 👤 แสดงรูปโปรไฟล์คนไข้ */}
                       {patientData.profile_pic || (patientData.history?.length > 0 && patientData.history[0].image_url) ? (
                         <img 
-                          src={patientData.profile_pic || patientData.history[0].image_url} 
+                          src={getFullImageUrl(patientData.profile_pic || patientData.history[0].image_url)} 
                           alt="Patient Profile" 
                           className="w-full h-full object-contain rounded-lg shadow-sm"
                           onError={(e) => {
@@ -749,7 +760,7 @@ function HistoryContent() {
                         <div className="flex items-center gap-4 flex-1" onClick={() => {setSearchQuery(p.id_card); handleSearch({preventDefault: () => {}} as any);}}>
                           <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 overflow-hidden">
                             {p.profile_pic || (p.history?.length > 0 && p.history[0].image_url) ? (
-                              <img src={p.profile_pic || p.history[0].image_url} className="w-full h-full object-cover" />
+                              <img src={getFullImageUrl(p.profile_pic || p.history[0].image_url)} className="w-full h-full object-cover" />
                             ) : (
                               <UserCircle2 size={24} />
                             )}

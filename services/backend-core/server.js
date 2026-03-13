@@ -89,7 +89,7 @@ const handlePatientProxy = async (req, res) => {
   }
 };
 
-app.all(['/api/patients*', '/patients*'], handlePatientProxy);
+app.all(['/api/patients*', '/patients*', '/uploads*'], handlePatientProxy);
 
 // 🛠️ Mount other routes at both prefixed and non-prefixed paths
 app.use(['/api/diagnosis', '/diagnosis'], diagnosisRoutes);
