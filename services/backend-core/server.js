@@ -21,7 +21,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.disable('x-powered-by');
 app.use(cors({ origin: "*" }));
 
-// 🏥 ROBUST STREAMING PROXY (Fixes binary corruption)
+// 🏥 ROBUST STREAMING PROXY (Preserves Binary Data & Headers)
 const handlePatientProxy = async (req, res) => {
   const PATIENT_SERVICE_URL = (process.env.PATIENT_SERVICE_URL || '').replace(/\/$/, '');
   if (!PATIENT_SERVICE_URL) return res.status(502).json({ error: "PATIENT_SERVICE_URL not set" });
@@ -38,7 +38,7 @@ const handlePatientProxy = async (req, res) => {
     const response = await axios({
       method: req.method,
       url: fullUrl,
-      data: req, // 🚀 Pipe the RAW request stream directly
+      data: req, // Pipe the RAW request stream directly
       headers: { 
         ...req.headers,
         host: new URL(PATIENT_SERVICE_URL).host 
@@ -50,27 +50,26 @@ const handlePatientProxy = async (req, res) => {
       timeout: 60000
     });
 
+    // 🚀 CRITICAL: Copy the Content-Type from the response
+    if (response.headers['content-type']) {
+      res.setHeader('Content-Type', response.headers['content-type']);
+    }
+    
     res.status(response.status);
-    // 🚀 Pipe the RAW response stream back to client
     response.data.pipe(res);
   } catch (error) {
     if (error.response) {
-      console.error(`[Proxy Error] Service returned ${error.response.status}`);
-      // For streams, we might need to consume the error body if available
       res.status(error.response.status).json({ error: "Service Error" });
     } else {
-      console.error(`[Proxy Error] Connection failed: ${error.message}`);
-      res.status(502).json({ error: "Bad Gateway", details: "Patient Service unreachable" });
+      console.error(`[Proxy Error] ${error.message}`);
+      res.status(502).json({ error: "Bad Gateway" });
     }
   }
 };
 
-// 🛡️ Route proxying BEFORE any body parsers to avoid stream consumption/corruption
 app.all(['/api/patients*', '/patients*', '/uploads*'], handlePatientProxy);
 
-// 🛠️ Standard Middleware ONLY for local routes
 app.use(express.json({ limit: '10mb' }));
-
 app.use(['/api/diagnosis', '/diagnosis'], diagnosisRoutes);
 app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/user', '/user'], userRoutes);
