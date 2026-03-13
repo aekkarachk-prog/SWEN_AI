@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Lock, LogOut, Stethoscope, History,
-  Bed, Activity, ShieldCheck, Hospital, LayoutDashboard, Key,
+  Bed, Activity, Shield, Hospital, LayoutDashboard, Key,
   MessageSquare, Settings as SettingsIcon, UserPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 
 // --- Types ---
-type Role = 'DOCTOR' | 'NURSE';
+type Role = 'ADMIN' | 'DOCTOR' | 'NURSE';
 
 interface UserData {
   username: string;
@@ -282,7 +282,7 @@ export default function LoginPage() {
                 <div className="text-right hidden sm:block">
                   <p className="text-slate-800 dark:text-white font-semibold">{auth.user?.name}</p>
                   <div className="flex items-center justify-end gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                    <Shield className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                     <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-widest">{auth.user?.role}</span>
                   </div>
                 </div>
@@ -325,12 +325,11 @@ export default function LoginPage() {
                   </h3>
                   <div className="space-y-4">
                     <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                      <p className="text-xs text-slate-500 uppercase mb-1">ชื่อ-นามสกุล</p>
-                      <p className="text-slate-800 dark:text-white font-medium">{auth.user?.name}</p>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50">
                       <p className="text-xs text-slate-500 uppercase mb-1">ตำแหน่ง</p>
-                      <p className="text-slate-800 dark:text-white font-medium">{auth.user?.role === 'DOCTOR' ? 'แพทย์ (Doctor)' : 'พยาบาล (Nurse)'}</p>
+                      <p className="text-slate-800 dark:text-white font-medium">
+                        {auth.user?.role === 'ADMIN' ? 'ผู้ดูแลระบบ (Admin)' : 
+                         auth.user?.role === 'DOCTOR' ? 'แพทย์ (Doctor)' : 'พยาบาล (Nurse)'}
+                      </p>
                     </div>
                   </div>
                 </section>
@@ -340,12 +339,33 @@ export default function LoginPage() {
               <div className="lg:col-span-2 space-y-6">
                 <section className="bg-white dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-8 min-h-[400px] shadow-lg">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-3">
-                    {auth.user?.role === 'DOCTOR' ? <Stethoscope className="text-blue-600 dark:text-blue-400" /> : <Activity className="text-emerald-600 dark:text-emerald-400" />}
-                    เมนูการใช้งานสำหรับ {auth.user?.role === 'DOCTOR' ? 'แพทย์' : 'พยาบาล'}
+                    {auth.user?.role === 'ADMIN' ? <Shield className="text-blue-600 dark:text-blue-400" /> : 
+                     auth.user?.role === 'DOCTOR' ? <Stethoscope className="text-blue-600 dark:text-blue-400" /> : 
+                     <Activity className="text-emerald-600 dark:text-emerald-400" />}
+                    เมนูการใช้งานสำหรับ {auth.user?.role === 'ADMIN' ? 'ผู้ดูแลระบบ' : 
+                                       auth.user?.role === 'DOCTOR' ? 'แพทย์' : 'พยาบาล'}
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {auth.user?.role === 'DOCTOR' ? (
+                    {auth.user?.role === 'ADMIN' ? (
+                      <>
+                        <Link href="/admin/accounts" className="block w-full">
+                          <MenuButton icon={<Shield />} title="จัดการบัญชีผู้ใช้งาน" desc="สร้าง แก้ไข หรือลบ บัญชีแพทย์และพยาบาล" color="blue" />
+                        </Link>
+                        <Link href="/dashboard" className="block w-full">
+                          <MenuButton icon={<LayoutDashboard />} title="Dashboard & Analytics" desc="สถิติและการวิเคราะห์ผลรวม" color="blue" />
+                        </Link>
+                        <Link href="/diagnosis" className="block w-full">
+                          <MenuButton icon={<Stethoscope />} title="วิเคราะห์อัลไซเมอร์" desc="AI ช่วยวิเคราะห์ภาพสแกนสมอง" color="blue" />
+                        </Link>
+                        <Link href="/history" className="block w-full">
+                          <MenuButton icon={<History />} title="ฐานข้อมูลผู้ป่วย" desc="ตรวจสอบรายชื่อผู้ป่วยทั้งหมด" color="blue" />
+                        </Link>
+                        <Link href="/settings" className="block w-full">
+                          <MenuButton icon={<SettingsIcon />} title="ตั้งค่าระบบ" desc="กำหนดค่าการทำงานของระบบ" color="blue" />
+                        </Link>
+                      </>
+                    ) : auth.user?.role === 'DOCTOR' ? (
                       <>
                         <Link href="/history" className="block w-full">
                           <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />

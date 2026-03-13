@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard, Users, Stethoscope, Settings as SettingsIcon, LogOut,
-  ArrowLeft, MessageSquare, Moon, Sun, User as UserIcon, Activity
-} from "lucide-react";
+  ArrowLeft, MessageSquare, Moon, Sun, User as UserIcon, Activity, Shield
+  } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 
@@ -147,16 +147,19 @@ export default function SettingsPage() {
       {/* Sidebar */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : <Activity size={24} />} {userName}
+          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' || userRole === 'ADMIN' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : userRole === 'ADMIN' ? <Shield size={24} /> : <Activity size={24} />} {userName}
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/"><NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" /></Link>
           <Link href="/dashboard"><NavItem icon={<Activity size={20}/>} label="Analytics"/></Link>
           <Link href="/history"><NavItem icon={<Users size={20}/>} label="Patients" /></Link>
-          {userRole === 'DOCTOR' && (
+          {(userRole === 'DOCTOR' || userRole === 'ADMIN') && (
             <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
+          )}
+          {userRole === 'ADMIN' && (
+            <Link href="/admin/accounts"><NavItem icon={<Shield size={20}/>} label="Accounts" /></Link>
           )}
           <Link href="/settings"><NavItem icon={<SettingsIcon size={20}/>} label="Setting" active/></Link>
           <div onClick={handleContactAdmin}>

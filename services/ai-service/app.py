@@ -1,4 +1,5 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException , Body
+from fastapi import FastAPI, File, UploadFile, HTTPException , Body, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import io
@@ -7,8 +8,30 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import timm
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Alzheimer Diagnosis AI Service")
+
+# 🛡️ Global Exception Handler to prevent Information Disclosure
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global Error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error", "code": "INTERNAL_ERROR"}
+    )
+
+# 🛡️ HTTPException Handler
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail}
+    )
 
 # อนุญาตให้ Backend Core เรียกใช้
 app.add_middleware(
