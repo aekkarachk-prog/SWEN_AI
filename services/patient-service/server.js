@@ -158,11 +158,13 @@ app.get('/api/patients/:id', async (req, res) => {
   p ? res.json(p) : res.status(404).json({ error: "Not found" });
 });
 
-// 📊 Analytics Summary
+// 📊 Analytics Summary (Complete structure)
 app.get('/api/patients/analytics/summary', async (req, res) => {
   try {
     const patients = await Patient.find();
-    res.json({
+    
+    // Default structure to prevent frontend crashes
+    const response = {
       kpi: { 
         totalPatients: patients.length, 
         scansToday: 0, 
@@ -174,11 +176,40 @@ app.get('/api/patients/analytics/summary', async (req, res) => {
         avgTurnaroundTime: "0.0",
         accuracyTrend: "+0.0"
       },
-      predictionData: [],
-      recentActivities: []
+      predictionData: [
+        { name: 'Non Demented', value: 0, color: '#10b981' },
+        { name: 'Very Mild', value: 0, color: '#3b82f6' },
+        { name: 'Mild', value: 0, color: '#f59e0b' },
+        { name: 'Moderate', value: 0, color: '#ef4444' }
+      ],
+      ageData: [
+        { range: '18-30', male: 0, female: 0 },
+        { range: '31-45', male: 0, female: 0 },
+        { range: '46-60', male: 0, female: 0 },
+        { range: '60+', male: 0, female: 0 }
+      ],
+      recentActivities: [],
+      trendData: [
+        { month: 'Jan', cases: 0, risk: 0 },
+        { month: 'Feb', cases: 0, risk: 0 },
+        { month: 'Mar', cases: 0, risk: 0 }
+      ]
+    };
+
+    // Fill in real data if available
+    const today = new Date(); today.setHours(0,0,0,0);
+    patients.forEach(p => {
+      p.history.forEach(h => {
+        if (new Date(h.date) >= today && h.diagnosis !== 'Initial') {
+          response.kpi.scansToday++;
+          response.kpi.analyzedToday++;
+        }
+      });
     });
+
+    res.json(response);
   } catch (error) {
-    res.status(500).json({ error: 'Analytics Error' });
+    res.status(500).json({ error: 'Analytics Error', details: error.message });
   }
 });
 
@@ -187,4 +218,6 @@ app.delete('/api/patients/:id', async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-app.listen(8080, '0.0.0.0', () => console.log(`Patient Service online on 8080`));
+if (require.main === module) {
+  app.listen(8080, '0.0.0.0', () => console.log(`Patient Service online on 8080`));
+}

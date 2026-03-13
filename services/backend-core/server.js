@@ -77,6 +77,8 @@ app.use(['/api/user', '/user'], userRoutes);
 app.get('/', (req, res) => res.json({ message: "Backend Core API is running!" }));
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => console.log(`Backend Core online on port ${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => console.log(`Backend Core online on port ${PORT}`));
+}
 
 module.exports = app;
