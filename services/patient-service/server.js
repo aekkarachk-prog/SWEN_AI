@@ -163,7 +163,17 @@ app.get('/api/patients/analytics/summary', async (req, res) => {
   try {
     const patients = await Patient.find();
     res.json({
-      kpi: { totalPatients: patients.length, scansToday: 0, accuracy: "0%" },
+      kpi: { 
+        totalPatients: patients.length, 
+        scansToday: 0, 
+        analyzedToday: 0, 
+        accuracy: "0%",
+        patientTrend: "+0",
+        scanTrend: "+0",
+        analyzedTrend: "+0",
+        avgTurnaroundTime: "0.0",
+        accuracyTrend: "+0.0"
+      },
       predictionData: [],
       recentActivities: []
     });
