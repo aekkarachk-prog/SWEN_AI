@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Lock, LogOut, Stethoscope, History,
   Bed, Activity, ShieldCheck, Hospital, LayoutDashboard, Key,
-  MessageSquare, Settings as SettingsIcon
+  MessageSquare, Settings as SettingsIcon, UserPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -350,15 +350,24 @@ export default function LoginPage() {
                         <Link href="/history" className="block w-full">
                           <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
                         </Link>
-                        <MenuButton icon={<Activity />} title="ดูผล Lab (Laboratory)" desc="ตรวจสอบผลการตรวจทางห้องปฏิบัติการ" color="blue" />
+                        <Link href="/dashboard" className="block w-full">
+                          <MenuButton icon={<LayoutDashboard />} title="Dashboard & Analytics" desc="สถิติและการวิเคราะห์ผลจาก AI" color="blue" />
+                        </Link>
                         <Link href="/diagnosis" className="block w-full">
                           <MenuButton icon={<Stethoscope />} title="วิเคราะห์อัลไซเมอร์" desc="AI ช่วยวิเคราะห์ภาพสแกนสมอง" color="blue" />
                         </Link>
                       </>
                     ) : (
                       <>
-                        <MenuButton icon={<Bed />} title="จัดการเตียง (Bed Management)" desc="ตรวจสอบและจัดการสถานะเตียงผู้ป่วย" color="emerald" />
-                        <MenuButton icon={<Activity />} title="บันทึกสัญญาณชีพ (V/S)" desc="บันทึกอุณหภูมิ ความดัน และชีพจร" color="emerald" />
+                        <Link href="/history/create" className="block w-full">
+                          <MenuButton icon={<UserPlus />} title="ลงทะเบียนผู้ป่วย" desc="เพิ่มข้อมูลผู้ป่วยใหม่เข้าระบบ" color="emerald" />
+                        </Link>
+                        <Link href="/history" className="block w-full">
+                          <MenuButton icon={<History />} title="รายชื่อผู้ป่วย" desc="ดูรายชื่อและประวัติการรักษา" color="emerald" />
+                        </Link>
+                        <Link href="/dashboard" className="block w-full">
+                          <MenuButton icon={<LayoutDashboard />} title="Dashboard & Analytics" desc="สถิติรวมของโรงพยาบาล" color="emerald" />
+                        </Link>
                       </>
                     )}
                   </div>

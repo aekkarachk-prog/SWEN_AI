@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "next": "^16.1.6"
+    "next": "^16.1.6",
+    "recharts": "^2.12.7"
   }
 }

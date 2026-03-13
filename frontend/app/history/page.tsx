@@ -1,15 +1,31 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
   Download, CheckCircle2, ArrowLeft, Search, UserCircle2, PlusCircle,
-  MessageSquare, Trash2, RotateCcw
+  MessageSquare, Trash2, RotateCcw, Activity
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 
 export default function HistoryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <HistoryContent />
+    </Suspense>
+  );
+}
+
+function HistoryContent() {
+  const searchParams = useSearchParams();
+  const hnParam = searchParams.get('hn');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [patientData, setPatientData] = useState<any>(null);
   const [allPatients, setAllPatients] = useState<any[]>([]);
@@ -17,6 +33,7 @@ export default function HistoryPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [userName, setUserName] = useState("Loading...");
+  const [userRole, setUserRole] = useState<string>("USER");
   const [isOnline, setIsOnline] = useState(true);
 
   React.useEffect(() => {
@@ -25,6 +42,7 @@ export default function HistoryPage() {
       try {
         const authData = JSON.parse(savedAuth);
         setUserName(authData.user?.name || "Unknown User");
+        setUserRole(authData.user?.role || "USER");
       } catch (e) {
         setUserName("Unknown User");
       }
@@ -93,10 +111,9 @@ export default function HistoryPage() {
     fetchAllPatients();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const performSearch = async (query: string) => {
     const isDark = document.documentElement.classList.contains('dark');
-    e.preventDefault();
-    if (!searchQuery.trim()) {
+    if (!query.trim()) {
       setIsSearching(false);
       setPatientData(null);
       return;
@@ -106,7 +123,7 @@ export default function HistoryPage() {
     setIsSearching(true);
 
     try {
-      const res = await fetch(`${getApiUrl()}/patients/${searchQuery}`);
+      const res = await fetch(`${getApiUrl()}/patients/${query}`);
       const data = await res.json();
 
       if (res.ok) {
@@ -115,7 +132,7 @@ export default function HistoryPage() {
         Swal.fire({
           icon: "error",
           title: "ไม่พบข้อมูล",
-          text: `ไม่พบผู้ป่วยที่มีหมายเลข HN: ${searchQuery}`,
+          text: `ไม่พบผู้ป่วยที่มีหมายเลข HN: ${query}`,
           confirmButtonColor: "#ef4444",
           customClass: {
             popup: isDark ? 'dark:bg-slate-900 dark:text-white border border-slate-800' : '',
@@ -141,6 +158,18 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  React.useEffect(() => {
+    if (hnParam) {
+      setSearchQuery(hnParam);
+      performSearch(hnParam);
+    }
+  }, [hnParam]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(searchQuery);
   };
 
   const latestHistory = patientData?.history?.[patientData.history.length - 1];
@@ -423,6 +452,10 @@ export default function HistoryPage() {
             <input id="swal-edit-name" class="swal2-input !m-0 !w-full ${isDark ? '!bg-slate-800 !text-white !border-slate-700' : ''}" value="${patientData.name}">
           </div>
           <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">อายุ (Age)</label>
+            <input id="swal-edit-age" type="number" class="swal2-input !m-0 !w-full ${isDark ? '!bg-slate-800 !text-white !border-slate-700' : ''}" value="${patientData.age || ''}">
+          </div>
+          <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">เพศ</label>
             <select id="swal-edit-gender" class="swal2-input !m-0 !w-full ${isDark ? '!bg-slate-800 !text-white !border-slate-700' : ''}">
               <option value="male" ${patientData.gender === 'male' ? 'selected' : ''}>ชาย (Male)</option>
@@ -450,6 +483,7 @@ export default function HistoryPage() {
       preConfirm: () => {
         return {
           name: (document.getElementById('swal-edit-name') as HTMLInputElement).value,
+          age: (document.getElementById('swal-edit-age') as HTMLInputElement).value,
           gender: (document.getElementById('swal-edit-gender') as HTMLSelectElement).value,
           general_notes: (document.getElementById('swal-edit-notes') as HTMLTextAreaElement).value,
           profile_pic: (window as any).swal_new_pic || undefined
@@ -523,14 +557,17 @@ export default function HistoryPage() {
       {/* --- SIDEBAR --- */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-            <Stethoscope size={24} /> {userName}
+          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : <Activity size={24} />} {userName}
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/"><NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" /></Link>
+          <Link href="/dashboard"><NavItem icon={<Activity size={20}/>} label="Analytics"/></Link>
           <Link href="/history"><NavItem icon={<Users size={20}/>} label="Patients" active/></Link>
-          <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
+          {userRole === 'DOCTOR' && (
+            <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
+          )}
           <Link href="/settings">
             <NavItem icon={<Settings size={20}/>} label="Setting" />
           </Link>
@@ -638,7 +675,7 @@ export default function HistoryPage() {
                           <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">HN / ID Card</p>
                           <h3 className="text-3xl font-mono font-bold text-slate-800 dark:text-white tracking-tighter">{patientData.id_card}</h3>
                           <p className="text-lg font-bold text-slate-600 dark:text-slate-300 mt-1">{patientData.name}</p>
-                          <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-bold">Gender: {patientData.gender || 'Not specified'}</p>
+                          <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-bold">Gender: {patientData.gender || 'Not specified'} | Age: {patientData.age || 'N/A'}</p>
                           {patientData.general_notes && (
                             <div className="mt-4 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100/50 dark:border-blue-900/30 text-left">
                               <p className="text-[9px] font-bold text-blue-400 uppercase mb-1">Doctor's Note</p>
@@ -716,7 +753,7 @@ export default function HistoryPage() {
                           </div>
                           <div>
                             <p className="font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">{p.name}</p>
-                            <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">{p.id_card}</p>
+                            <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">{p.id_card} | Age: {p.age || 'N/A'}</p>
                           </div>
                         </div>
                       </div>

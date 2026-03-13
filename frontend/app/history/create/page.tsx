@@ -13,7 +13,8 @@ import {
   Download,
   Phone,
   Fingerprint,
-  MessageSquare
+  MessageSquare,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
@@ -26,6 +27,7 @@ export default function CreatePatientPage() {
   const [mounted, setMounted] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [userName, setUserName] = useState("Loading...");
+  const [userRole, setUserRole] = useState<string>("USER");
   const [isOnline, setIsOnline] = useState(true);
 
   // ป้องกัน Hydration Error และสุ่ม ID ฝั่ง Client เท่านั้น
@@ -38,6 +40,7 @@ export default function CreatePatientPage() {
       try {
         const authData = JSON.parse(savedAuth);
         setUserName(authData.user?.name || "Unknown User");
+        setUserRole(authData.user?.role || "USER");
       } catch (e) {
         setUserName("Unknown User");
       }
@@ -75,6 +78,7 @@ export default function CreatePatientPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    age: "", // 🎂 เพิ่มฟิลด์ Age
     gender: "",
     phoneNumber: "",
     notes: "", // 📝 เพิ่มฟิลด์ Note
@@ -145,6 +149,7 @@ export default function CreatePatientPage() {
         body: JSON.stringify({
           id_card: patientId,
           name: fullName,
+          age: formData.age, // 🎂 ส่ง Age ไปด้วย
           gender: formData.gender,
           general_notes: formData.notes, // 📝 ส่ง Note ไปด้วย
         }),
@@ -252,20 +257,25 @@ export default function CreatePatientPage() {
       {/* ===== SIDEBAR (เหมือนกับหน้า History เพื่อความต่อเนื่อง) ===== */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-            <Stethoscope size={24} /> {userName}
+          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : <Activity size={24} />} {userName}
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/">
             <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" />
           </Link>
+          <Link href="/dashboard">
+            <NavItem icon={<Activity size={20} />} label="Analytics" />
+          </Link>
           <Link href="/history">
             <NavItem icon={<Users size={20} />} label="Patients" active />
           </Link>
-          <Link href="/diagnosis">
-            <NavItem icon={<Stethoscope size={20} />} label="Diagnosis" />
-          </Link>
+          {userRole === 'DOCTOR' && (
+            <Link href="/diagnosis">
+              <NavItem icon={<Stethoscope size={20} />} label="Diagnosis" />
+            </Link>
+          )}
           <Link href="/settings">
             <NavItem icon={<Settings size={20} />} label="Setting" />
           </Link>
@@ -410,6 +420,19 @@ export default function CreatePatientPage() {
                         className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500/20 outline-none transition font-medium text-slate-700 dark:text-slate-200" 
                       />
                     </div>
+                  </div>
+
+                  {/* Age Field */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">อายุ (Age)</label>
+                    <input 
+                      type="number" 
+                      name="age" 
+                      placeholder="กรอกอายุ" 
+                      required
+                      onChange={handleChange}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500/20 outline-none transition font-medium text-slate-700 dark:text-slate-200" 
+                    />
                   </div>
 
                   {/* Gender Field */}
