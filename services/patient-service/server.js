@@ -90,7 +90,24 @@ app.post('/api/patients', async (req, res) => {
 app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
   try {
     const imageUrl = await uploadToGCS(req.file);
-    const updateData = { $push: { history: { diagnosis: req.body.diagnosis, probability: parseFloat(req.body.probability), notes: req.body.notes, image_url: imageUrl, duration: parseFloat(req.body.duration) } } };
+    
+    // 🛡️ Fix: Use || 0 to prevent NaN (Not a Number) errors in MongoDB
+    const probability = parseFloat(req.body.probability) || 0;
+    const duration = parseFloat(req.body.duration) || 0;
+    const diagnosis = req.body.diagnosis || 'Initial';
+    const notes = req.body.notes || '';
+
+    const updateData = { 
+      $push: { 
+        history: { 
+          diagnosis, 
+          probability, 
+          notes, 
+          image_url: imageUrl, 
+          duration 
+        } 
+      } 
+    };
     const existing = await Patient.findOne({ id_card: req.body.id_card });
     if (!existing || !existing.profile_pic) updateData.$set = { profile_pic: imageUrl };
     if (!existing) updateData.$setOnInsert = { name: req.body.name, created_at: new Date() };
