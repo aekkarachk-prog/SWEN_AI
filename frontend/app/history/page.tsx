@@ -448,8 +448,8 @@ function HistoryContent() {
       title: 'แก้ไขข้อมูลผู้ป่วย',
       html: `
         <div class="text-left space-y-4 p-2">
-          <div className="flex justify-center mb-4">
-            <div className="relative group cursor-pointer" onclick="document.getElementById('swal-edit-pic').click()">
+          <div class="flex justify-center mb-4">
+            <div class="relative group cursor-pointer" onclick="document.getElementById('swal-edit-pic').click()">
               <img id="swal-preview-pic" src="${getFullImageUrl(patientData.profile_pic) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(patientData.name)}" class="w-24 h-24 rounded-full object-cover border-4 border-blue-100 dark:border-slate-700 shadow-md" />
               <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
 
