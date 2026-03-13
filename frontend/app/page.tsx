@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Lock, LogOut, Stethoscope, History,
   Bed, Activity, ShieldCheck, Hospital, LayoutDashboard, Key,
-  MessageSquare, Settings as SettingsIcon
+  MessageSquare, Settings as SettingsIcon, UserPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -36,6 +36,24 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🔒 Lockout State
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutTime, setLockoutTime] = useState(0);
+
+  // 🕒 Handle Lockout Countdown
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLocked && lockoutTime > 0) {
+      timer = setInterval(() => {
+        setLockoutTime((prev) => prev - 1);
+      }, 1000);
+    } else if (lockoutTime === 0) {
+      setIsLocked(false);
+    }
+    return () => clearInterval(timer);
+  }, [isLocked, lockoutTime]);
+
   // 🔄 Check for existing session on mount
   React.useEffect(() => {
     const savedAuth = localStorage.getItem('alz_auth');
@@ -59,6 +77,8 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
+    
     setIsLoading(true);
     setError('');
 
@@ -80,8 +100,18 @@ export default function LoginPage() {
         };
         setAuth(newAuth);
         localStorage.setItem('alz_auth', JSON.stringify(newAuth));
+        setFailedAttempts(0); // Reset on successful login
       } else {
-        setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        const newFailedAttempts = failedAttempts + 1;
+        setFailedAttempts(newFailedAttempts);
+        
+        if (newFailedAttempts >= 6) {
+          setIsLocked(true);
+          setLockoutTime(30);
+          setError('คุณกรอกรหัสผิดเกิน 6 ครั้ง โปรดลองใหม่ในอีก 30 วินาที');
+        } else {
+          setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        }
       }
     } catch (err) {
       setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
@@ -204,11 +234,13 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isLocked}
                   className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center"
                 >
                   {isLoading ? (
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : isLocked ? (
+                    `โปรดลองใหม่ใน (${lockoutTime}s)`
                   ) : (
                     'เข้าสู่ระบบ'
                   )}
@@ -318,15 +350,24 @@ export default function LoginPage() {
                         <Link href="/history" className="block w-full">
                           <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />
                         </Link>
-                        <MenuButton icon={<Activity />} title="ดูผล Lab (Laboratory)" desc="ตรวจสอบผลการตรวจทางห้องปฏิบัติการ" color="blue" />
+                        <Link href="/dashboard" className="block w-full">
+                          <MenuButton icon={<LayoutDashboard />} title="Dashboard & Analytics" desc="สถิติและการวิเคราะห์ผลจาก AI" color="blue" />
+                        </Link>
                         <Link href="/diagnosis" className="block w-full">
                           <MenuButton icon={<Stethoscope />} title="วิเคราะห์อัลไซเมอร์" desc="AI ช่วยวิเคราะห์ภาพสแกนสมอง" color="blue" />
                         </Link>
                       </>
                     ) : (
                       <>
-                        <MenuButton icon={<Bed />} title="จัดการเตียง (Bed Management)" desc="ตรวจสอบและจัดการสถานะเตียงผู้ป่วย" color="emerald" />
-                        <MenuButton icon={<Activity />} title="บันทึกสัญญาณชีพ (V/S)" desc="บันทึกอุณหภูมิ ความดัน และชีพจร" color="emerald" />
+                        <Link href="/history/create" className="block w-full">
+                          <MenuButton icon={<UserPlus />} title="ลงทะเบียนผู้ป่วย" desc="เพิ่มข้อมูลผู้ป่วยใหม่เข้าระบบ" color="emerald" />
+                        </Link>
+                        <Link href="/history" className="block w-full">
+                          <MenuButton icon={<History />} title="รายชื่อผู้ป่วย" desc="ดูรายชื่อและประวัติการรักษา" color="emerald" />
+                        </Link>
+                        <Link href="/dashboard" className="block w-full">
+                          <MenuButton icon={<LayoutDashboard />} title="Dashboard & Analytics" desc="สถิติรวมของโรงพยาบาล" color="emerald" />
+                        </Link>
                       </>
                     )}
                   </div>

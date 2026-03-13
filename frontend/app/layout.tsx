@@ -12,17 +12,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  const theme = localStorage.getItem('alz_theme');
-                  if (theme === 'dark') {
+                  const savedTheme = localStorage.getItem('alz_theme');
+                  if (savedTheme === 'dark') {
                     document.documentElement.classList.add('dark');
-                  } else {
+                  } else if (savedTheme === 'light') {
                     document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {
