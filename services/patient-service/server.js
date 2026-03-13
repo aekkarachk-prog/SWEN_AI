@@ -212,7 +212,12 @@ app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
 
     res.json({ message: "Success", patient, imageUrl });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error during upload' });
+    console.error("Upload AI error:", error);
+    res.status(500).json({ 
+      error: 'Internal Server Error during upload', 
+      details: error.message,
+      bucket: process.env.GCS_BUCKET_NAME || 'alzheimer-patient-images'
+    });
   }
 });
 
