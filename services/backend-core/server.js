@@ -45,33 +45,46 @@ app.use(express.json({ limit: '10mb' })); // Increased for potential patient dat
 
 // 🏥 Proxy for Patient Service (Handles both /api/patients and /patients)
 const handlePatientProxy = async (req, res) => {
-  const PATIENT_SERVICE_URL = process.env.PATIENT_SERVICE_URL || 'http://patient-service:3001';
+  const PATIENT_SERVICE_URL = process.env.PATIENT_SERVICE_URL;
   
+  if (!PATIENT_SERVICE_URL) {
+    console.error("[Proxy Error] PATIENT_SERVICE_URL is not set");
+    return res.status(502).json({ error: "Configuration Error", details: "PATIENT_SERVICE_URL is not set on server" });
+  }
+
   // Ensure target path has /api prefix for the patient-service
   let targetPath = req.originalUrl;
   if (!targetPath.startsWith('/api')) {
     targetPath = '/api' + targetPath;
   }
   
-  console.log(`[Proxy] ${req.method} ${req.originalUrl} -> ${PATIENT_SERVICE_URL}${targetPath}`);
-  
   try {
     const config = {
       method: req.method,
       url: `${PATIENT_SERVICE_URL}${targetPath}`,
-      data: req.body,
-      headers: { ...req.headers }
+      headers: { 
+        'accept': req.headers.accept,
+        'authorization': req.headers.authorization,
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']
+      },
+      params: req.query,
+      timeout: 30000 // 30s timeout
     };
     
-    delete config.headers.host;
-    delete config.headers['content-length'];
+    // 🛡️ IMPORTANT: Only send data for methods that support a body
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      config.data = req.body;
+    }
 
     const response = await axios(config);
     res.status(response.status).json(response.data);
   } catch (error) {
     if (error.response) {
+      console.error(`[Proxy Error] Patient Service returned ${error.response.status}`);
       return res.status(error.response.status).json(error.response.data);
     }
+    console.error(`[Proxy Error] Failed to reach Patient Service: ${error.message}`);
     res.status(502).json({ error: "Bad Gateway", details: "Patient Service unreachable" });
   }
 };
