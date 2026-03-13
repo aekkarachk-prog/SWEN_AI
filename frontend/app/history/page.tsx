@@ -24,7 +24,7 @@ export default function HistoryPage() {
 
 function HistoryContent() {
   const searchParams = useSearchParams();
-  const hnParam = searchParams.get('hn');
+  const hnParam = searchParams ? searchParams.get('hn') : null;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [patientData, setPatientData] = useState<any>(null);
