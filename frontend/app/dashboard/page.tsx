@@ -58,7 +58,49 @@ export default function DashboardPage() {
       const res = await fetch(`${API_URL}/api/patients/analytics/summary`);
       if (!res.ok) throw new Error("Failed to fetch summary data");
       const summary = await res.json();
-      setData(summary);
+      
+      // 🚀 Global Safety Update: Ensure ALL fields exist before setting state
+      const safeData: SummaryData = {
+        kpi: {
+          totalPatients: 0,
+          scansToday: 0,
+          analyzedToday: 0,
+          humanReviewedToday: 0,
+          accuracy: "0%",
+          patientTrend: "+0",
+          scanTrend: "+0",
+          analyzedTrend: "+0",
+          avgTurnaroundTime: "0.0",
+          accuracyTrend: "+0.0",
+          ...summary.kpi
+        },
+        predictionData: (summary.predictionData || []).map((d: any) => ({
+          name: d.name || "Unknown",
+          value: d.value || 0,
+          color: d.color || "#cbd5e1"
+        })),
+        ageData: (summary.ageData || []).map((d: any) => ({
+          range: d.range || "N/A",
+          male: d.male || 0,
+          female: d.female || 0
+        })),
+        recentActivities: (summary.recentActivities || []).map((a: any) => ({
+          id: a.id || Math.random().toString(),
+          hn: a.hn || "N/A",
+          patient: a.patient || "Unknown",
+          type: a.type || "Activity",
+          status: a.status || "Unknown",
+          time: a.time || new Date().toISOString(),
+          alert: !!a.alert
+        })),
+        trendData: (summary.trendData || []).map((t: any) => ({
+          month: t.month || "N/A",
+          cases: t.cases || 0,
+          risk: t.risk || 0
+        }))
+      };
+
+      setData(safeData);
     } catch (err: any) {
       console.error(err);
       setError(err.message);
@@ -481,7 +523,7 @@ function KPICard({ title, value, icon, trend, color }: { title: string, value: s
         <div className={`p-3 rounded-2xl ${colorMap[color]}`}>
           {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6' })}
         </div>
-        <div className={`flex items-center gap-1 text-[10px] font-black ${trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'}`}>
+        <div className={`flex items-center gap-1 text-[10px] font-black ${(trend?.toString() || "").startsWith('+') ? 'text-emerald-500' : 'text-red-500'}`}>
           {trend}% <ArrowUpRight className="w-3 h-3" />
         </div>
       </div>
