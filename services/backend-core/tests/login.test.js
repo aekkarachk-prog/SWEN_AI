@@ -1,46 +1,67 @@
 const request = require('supertest');
-// สมมติว่าไฟล์หลักของ API คุณชื่อ server.js หรือ app.js
-// แนะนำให้ใน server.js มีการแยกตัวแปร app ออกมาด้วย module.exports = app;
 const app = require('../server'); 
 
-describe('POST /api/login - Test Cases', () => {
-  
-  // Test Case 1: กรณีสำเร็จ
-  it('✅ ควรคืนค่า 200 และมี Token เมื่อข้อมูลถูกต้อง', async () => {
-    const res = await request(app)
-      .post('/api/login') // เปลี่ยน URL ให้ตรงกับ Route ของคุณ
-      .send({
-        username: 'doctor_somchai',
-        password: 'password123'
-      });
-      
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('token');
+describe('Auth & User API - Test Cases', () => {
+  let userToken = '';
+
+  // --- Auth Tests ---
+  describe('POST /api/auth/login', () => {
+    it('✅ ควรคืนค่า 200 และมี Token เมื่อข้อมูลถูกต้อง', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: 'doctor_somchai',
+          password: 'password123'
+        });
+        
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('token');
+      expect(res.body.user.username).toBe('doctor_somchai');
+      userToken = res.body.token; // เก็บ Token ไว้ใช้เทสต์ User API
+    });
+
+    it('❌ ควรคืนค่า 401 เมื่อรหัสผ่านผิด', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: 'doctor_somchai',
+          password: 'wrongpassword'
+        });
+        
+      expect(res.statusCode).toEqual(401);
+    });
   });
 
-  // Test Case 2: รหัสผ่านผิด
-  it('❌ ควรคืนค่า 401 เมื่อรหัสผ่านผิด', async () => {
-    const res = await request(app)
-      .post('/api/login')
-      .send({
-        username: 'doctor_somchai',
-        password: 'wrongpassword'
-      });
+  // --- User Tests ---
+  describe('User API /api/user', () => {
+    
+    it('✅ GET /profile - ควรดึงข้อมูลโปรไฟล์ได้เมื่อมี Token', async () => {
+      const res = await request(app)
+        .get('/api/user/profile')
+        .set('Authorization', `Bearer ${userToken}`);
       
-    expect(res.statusCode).toEqual(401);
-  });
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.user).toHaveProperty('name');
+      expect(res.body.user.username).toBe('doctor_somchai');
+    });
 
-  // Test Case 3: ไม่ใส่ข้อมูล
-  it('❌ ควรคืนค่า 400 เมื่อไม่ส่ง Username หรือ Password', async () => {
-    const res = await request(app)
-      .post('/api/login')
-      .send({
-        username: 'doctor_somchai'
-        // ลืมส่งรหัสผ่าน
-      });
+    it('❌ GET /profile - ควรคืนค่า 401 เมื่อไม่มี Token', async () => {
+      const res = await request(app).get('/api/user/profile');
+      expect(res.statusCode).toEqual(401);
+    });
+
+    it('✅ GET /account/:username - ควรดึงข้อมูลผู้ใช้ได้จากชื่อบัญชี', async () => {
+      const res = await request(app).get('/api/user/account/nurse_somsri');
       
-    expect(res.statusCode).toEqual(400);
-    expect(res.body).toHaveProperty('error');
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.user.username).toBe('nurse_somsri');
+      expect(res.body.user.role).toBe('NURSE');
+    });
+
+    it('❌ GET /account/:username - ควรคืนค่า 404 เมื่อไม่พบผู้ใช้', async () => {
+      const res = await request(app).get('/api/user/account/non_existent_user');
+      expect(res.statusCode).toEqual(404);
+    });
   });
 
 });
