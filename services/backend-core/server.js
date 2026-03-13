@@ -47,7 +47,7 @@ app.use(express.json({ limit: '10mb' })); // Increased for potential patient dat
 
 // 🏥 Proxy for Patient Service (Handles both /api/patients and /patients)
 const handlePatientProxy = async (req, res) => {
-  const PATIENT_SERVICE_URL = process.env.PATIENT_SERVICE_URL;
+  const PATIENT_SERVICE_URL = (process.env.PATIENT_SERVICE_URL || '').replace(/\/$/, '');
   
   if (!PATIENT_SERVICE_URL) {
     console.error("[Proxy Error] PATIENT_SERVICE_URL is not set");
@@ -57,17 +57,18 @@ const handlePatientProxy = async (req, res) => {
   // Ensure target path is correct
   let targetPath = req.originalUrl;
   
-  // Logic: 
   // 1. If it's a /patients request, ensure it has /api prefix for the service
-  // 2. If it's an /uploads request, keep it as is (don't add /api)
   if (targetPath.includes('/patients') && !targetPath.startsWith('/api')) {
     targetPath = '/api' + targetPath;
   }
   
+  const fullUrl = `${PATIENT_SERVICE_URL}${targetPath}`;
+  console.log(`[Proxy] ${req.method} ${req.originalUrl} -> ${fullUrl}`);
+  
   try {
     const config = {
       method: req.method,
-      url: `${PATIENT_SERVICE_URL}${targetPath}`,
+      url: fullUrl,
       headers: { 
         'accept': req.headers.accept,
         'authorization': req.headers.authorization,
@@ -75,10 +76,11 @@ const handlePatientProxy = async (req, res) => {
         'user-agent': req.headers['user-agent']
       },
       params: req.query,
-      timeout: 30000 // 30s timeout
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      timeout: 60000 // 60s for slow uploads
     };
     
-    // 🛡️ IMPORTANT: Only send data for methods that support a body
     if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
       config.data = req.body;
     }
@@ -87,10 +89,10 @@ const handlePatientProxy = async (req, res) => {
     res.status(response.status).json(response.data);
   } catch (error) {
     if (error.response) {
-      console.error(`[Proxy Error] Patient Service returned ${error.response.status}`);
+      console.error(`[Proxy Error] Service returned ${error.response.status}:`, JSON.stringify(error.response.data));
       return res.status(error.response.status).json(error.response.data);
     }
-    console.error(`[Proxy Error] Failed to reach Patient Service: ${error.message}`);
+    console.error(`[Proxy Error] Connection failed to ${fullUrl}: ${error.message}`);
     res.status(502).json({ error: "Bad Gateway", details: "Patient Service unreachable" });
   }
 };
