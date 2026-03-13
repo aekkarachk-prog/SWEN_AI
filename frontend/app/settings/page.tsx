@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard, Users, Stethoscope, Settings as SettingsIcon, LogOut,
-  ArrowLeft, MessageSquare, Moon, Sun, User as UserIcon, Activity
-} from "lucide-react";
+  ArrowLeft, MessageSquare, Moon, Sun, User as UserIcon, Activity, Shield
+  } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 
@@ -155,8 +155,11 @@ export default function SettingsPage() {
           <Link href="/"><NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" /></Link>
           <Link href="/dashboard"><NavItem icon={<Activity size={20}/>} label="Analytics"/></Link>
           <Link href="/history"><NavItem icon={<Users size={20}/>} label="Patients" /></Link>
-          {userRole === 'DOCTOR' && (
+          {(userRole === 'DOCTOR' || userRole === 'ADMIN') && (
             <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
+          )}
+          {userRole === 'ADMIN' && (
+            <Link href="/admin/accounts"><NavItem icon={<Shield size={20}/>} label="Accounts" /></Link>
           )}
           <Link href="/settings"><NavItem icon={<SettingsIcon size={20}/>} label="Setting" active/></Link>
           <div onClick={handleContactAdmin}>

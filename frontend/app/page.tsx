@@ -345,7 +345,22 @@ export default function LoginPage() {
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {auth.user?.role === 'DOCTOR' ? (
+                    {auth.user?.role === 'ADMIN' ? (
+                      <>
+                        <Link href="/admin/accounts" className="block w-full">
+                          <MenuButton icon={<ShieldCheck />} title="จัดการบัญชีผู้ใช้งาน" desc="สร้าง แก้ไข หรือลบ บัญชีแพทย์และพยาบาล" color="blue" />
+                        </Link>
+                        <Link href="/dashboard" className="block w-full">
+                          <MenuButton icon={<LayoutDashboard />} title="Dashboard & Analytics" desc="สถิติและการวิเคราะห์ผลรวม" color="blue" />
+                        </Link>
+                        <Link href="/history" className="block w-full">
+                          <MenuButton icon={<History />} title="ฐานข้อมูลผู้ป่วย" desc="ตรวจสอบรายชื่อผู้ป่วยทั้งหมด" color="blue" />
+                        </Link>
+                        <Link href="/settings" className="block w-full">
+                          <MenuButton icon={<SettingsIcon />} title="ตั้งค่าระบบ" desc="กำหนดค่าการทำงานของระบบ" color="blue" />
+                        </Link>
+                      </>
+                    ) : auth.user?.role === 'DOCTOR' ? (
                       <>
                         <Link href="/history" className="block w-full">
                           <MenuButton icon={<History />} title="ดูประวัติคนไข้ (EMR)" desc="ตรวจสอบประวัติการรักษาที่ผ่านมา" color="blue" />

@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
-  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare, Save, Activity
+  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare, Save, Activity, Shield
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,11 +28,11 @@ export default function DiagnosisPage() {
         setUserRole(role);
 
         // 🛡️ Role-Based Access Control
-        if (role !== 'DOCTOR') {
+        if (role !== 'DOCTOR' && role !== 'ADMIN') {
           Swal.fire({
             icon: 'error',
             title: 'Access Denied',
-            text: 'เฉพาะแพทย์เท่านั้นที่มีสิทธิ์เข้าใช้งานระบบวิเคราะห์ AI',
+            text: 'เฉพาะแพทย์และผู้ดูแลระบบเท่านั้นที่มีสิทธิ์เข้าใช้งานระบบวิเคราะห์ AI',
             confirmButtonColor: '#3b82f6',
           }).then(() => {
             window.location.href = "/";
@@ -499,9 +499,16 @@ export default function DiagnosisPage() {
           <Link href="/history">
             <NavItem icon={<Users size={20}/>} label="Patients" />
           </Link>
-          <Link href="/diagnosis">
-            <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis" active/>
-          </Link>
+          {(userRole === 'DOCTOR' || userRole === 'ADMIN') && (
+            <Link href="/diagnosis">
+              <NavItem icon={<Stethoscope size={20}/>} label="Diagnosis" active/>
+            </Link>
+          )}
+          {userRole === 'ADMIN' && (
+            <Link href="/admin/accounts">
+              <NavItem icon={<Shield size={20}/>} label="Accounts" />
+            </Link>
+          )}
           <Link href="/settings">
             <NavItem icon={<Settings size={20}/>} label="Setting" />
           </Link>

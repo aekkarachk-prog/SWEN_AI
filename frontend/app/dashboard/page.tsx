@@ -6,8 +6,8 @@ import {
   Users, Brain, Activity, Clock, UserCheck, 
   ArrowUpRight, AlertCircle, LayoutDashboard,
   Calendar, RefreshCcw, Stethoscope, Settings, 
-  ChevronRight, Info, LogOut, MessageSquare, ArrowLeft
-} from 'lucide-react';
+  ChevronRight, Info, LogOut, MessageSquare, ArrowLeft, Shield
+  } from 'lucide-react';
 import Link from 'next/link';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
@@ -200,8 +200,11 @@ export default function DashboardPage() {
           <Link href="/"><NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" /></Link>
           <Link href="/dashboard"><NavItem icon={<Activity size={20}/>} label="Analytics" active/></Link>
           <Link href="/history"><NavItem icon={<Users size={20}/>} label="Patients" /></Link>
-          {userRole === 'DOCTOR' && (
+          {(userRole === 'DOCTOR' || userRole === 'ADMIN') && (
             <Link href="/diagnosis"><NavItem icon={<Stethoscope size={20}/>} label="Diagnosis"/></Link>
+          )}
+          {userRole === 'ADMIN' && (
+            <Link href="/admin/accounts"><NavItem icon={<Shield size={20}/>} label="Accounts" /></Link>
           )}
           <Link href="/settings">
             <NavItem icon={<Settings size={20}/>} label="Setting" />

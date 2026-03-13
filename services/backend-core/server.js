@@ -1,6 +1,13 @@
 // ไฟล์: services/backend-core/server.js
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+
+// --- MongoDB Connection ---
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/alzheimer_db';
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Connected to MongoDB (Backend Core)'))
+  .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 const diagnosisRoutes = require('./src/routes/diagnosis');
 const authRoutes = require('./src/routes/auth');
