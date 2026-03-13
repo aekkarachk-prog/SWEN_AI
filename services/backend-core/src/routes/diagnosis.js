@@ -47,16 +47,24 @@ router.post('/', upload.single('file'), async (req, res) => {
     // AI_SERVICE_URL จาก environment 
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:8080/predict';
 
-    console.log(`Forwarding image to AI Service`); // Obscured full URL in generic logs
+    console.log(`Forwarding image to AI Service`); 
     
+    const startTime = Date.now();
     const aiResponse = await axios.post(aiServiceUrl, formData, {
       headers: {
         ...formData.getHeaders(),
       },
     });
+    const endTime = Date.now();
+    const duration = (endTime - startTime) / 1000; // วินาที
 
-    res.json(aiResponse.data);
-    console.log("AI Prediction successful:", aiResponse.data.prediction);
+    const resultWithTime = {
+      ...aiResponse.data,
+      duration: duration
+    };
+
+    res.json(resultWithTime);
+    console.log("AI Prediction successful:", aiResponse.data.prediction, `in ${duration}s`);
 
   } catch (error) {
     console.error('Error in diagnosis route:', error.message);

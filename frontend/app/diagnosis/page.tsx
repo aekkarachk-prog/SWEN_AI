@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Stethoscope, Settings, LogOut, 
-  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare, Save
+  Upload, Download, CheckCircle2, ArrowLeft, MessageSquare, Save, Activity
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -15,6 +15,7 @@ export default function DiagnosisPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [userName, setUserName] = useState("Loading...");
+  const [userRole, setUserRole] = useState<string>("USER");
   const [isOnline, setIsOnline] = useState(true);
 
   React.useEffect(() => {
@@ -22,12 +23,26 @@ export default function DiagnosisPage() {
     if (savedAuth) {
       try {
         const authData = JSON.parse(savedAuth);
+        const role = authData.user?.role || "USER";
         setUserName(authData.user?.name || "Unknown User");
+        setUserRole(role);
+
+        // 🛡️ Role-Based Access Control
+        if (role !== 'DOCTOR') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Access Denied',
+            text: 'เฉพาะแพทย์เท่านั้นที่มีสิทธิ์เข้าใช้งานระบบวิเคราะห์ AI',
+            confirmButtonColor: '#3b82f6',
+          }).then(() => {
+            window.location.href = "/";
+          });
+        }
       } catch (e) {
         setUserName("Unknown User");
       }
     } else {
-      setUserName("Unknown User");
+      window.location.href = "/";
     }
 
     // Load and Sync Theme - Default to light
@@ -278,6 +293,9 @@ export default function DiagnosisPage() {
       uploadData.append("diagnosis", result.prediction);
       uploadData.append("notes", `AI Confidence: ${confidence.toFixed(2)}%`);
       uploadData.append("probability", (confidence / 100).toString());
+      if (result.duration) {
+        uploadData.append("duration", result.duration.toString());
+      }
 
       const res = await fetch(`${API_URL}/patients/upload`, {
         method: "POST",
@@ -466,14 +484,17 @@ export default function DiagnosisPage() {
       {/* --- SIDEBAR --- */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-            <Stethoscope size={24} /> {userName}
+          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : <Activity size={24} />} {userName}
           </h1>
         </div>
         
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/">
             <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" />
+          </Link>
+          <Link href="/dashboard">
+            <NavItem icon={<Activity size={20}/>} label="Analytics" />
           </Link>
           <Link href="/history">
             <NavItem icon={<Users size={20}/>} label="Patients" />

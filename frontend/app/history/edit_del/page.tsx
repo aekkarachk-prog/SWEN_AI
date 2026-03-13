@@ -13,7 +13,8 @@ import {
   Download,
   Phone,
   Fingerprint,
-  MessageSquare
+  MessageSquare,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
@@ -26,6 +27,7 @@ export default function EditPatientPage() {
   const [mounted, setMounted] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [userName, setUserName] = useState("Loading...");
+  const [userRole, setUserRole] = useState<string>("USER");
   const [isOnline, setIsOnline] = useState(true);
 
   // ป้องกัน Hydration Error
@@ -37,6 +39,7 @@ export default function EditPatientPage() {
       try {
         const authData = JSON.parse(savedAuth);
         setUserName(authData.user?.name || "Unknown User");
+        setUserRole(authData.user?.role || "USER");
       } catch (e) {
         setUserName("Unknown User");
       }
@@ -220,20 +223,25 @@ export default function EditPatientPage() {
       {/* ===== SIDEBAR (เหมือนกับหน้า History เพื่อความต่อเนื่อง) ===== */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-            <Stethoscope size={24} /> {userName}
+          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : <Activity size={24} />} {userName}
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/">
             <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" />
           </Link>
+          <Link href="/dashboard">
+            <NavItem icon={<Activity size={20} />} label="Analytics" />
+          </Link>
           <Link href="/history">
             <NavItem icon={<Users size={20} />} label="Patients" active />
           </Link>
-          <Link href="/diagnosis">
-            <NavItem icon={<Stethoscope size={20} />} label="Diagnosis" />
-          </Link>
+          {userRole === 'DOCTOR' && (
+            <Link href="/diagnosis">
+              <NavItem icon={<Stethoscope size={20} />} label="Diagnosis" />
+            </Link>
+          )}
           <Link href="/settings">
             <NavItem icon={<Settings size={20} />} label="Setting" />
           </Link>
