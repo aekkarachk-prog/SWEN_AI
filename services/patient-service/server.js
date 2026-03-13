@@ -218,4 +218,6 @@ app.delete('/api/patients/:id', async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-app.listen(8080, '0.0.0.0', () => console.log(`Patient Service online on 8080`));
+if (require.main === module) {
+  app.listen(8080, '0.0.0.0', () => console.log(`Patient Service online on 8080`));
+}
