@@ -43,24 +43,26 @@ app.use('/api/', limiter);
 // 🛡️ Security: Restrict payload size to prevent DoS
 app.use(express.json({ limit: '10mb' })); // Increased for potential patient data transfers
 
-// 🏥 Proxy for Patient Service
-app.all('/api/patients*', async (req, res) => {
+// 🏥 Proxy for Patient Service (Handles both /api/patients and /patients)
+const handlePatientProxy = async (req, res) => {
   const PATIENT_SERVICE_URL = process.env.PATIENT_SERVICE_URL || 'http://patient-service:3001';
-  const targetPath = req.originalUrl;
   
-  console.log(`[Proxy] Forwarding ${req.method} ${targetPath} to ${PATIENT_SERVICE_URL}`);
+  // Ensure target path has /api prefix for the patient-service
+  let targetPath = req.originalUrl;
+  if (!targetPath.startsWith('/api')) {
+    targetPath = '/api' + targetPath;
+  }
+  
+  console.log(`[Proxy] ${req.method} ${req.originalUrl} -> ${PATIENT_SERVICE_URL}${targetPath}`);
   
   try {
     const config = {
       method: req.method,
       url: `${PATIENT_SERVICE_URL}${targetPath}`,
       data: req.body,
-      headers: { 
-        ...req.headers,
-      }
+      headers: { ...req.headers }
     };
     
-    // Clean up host header for Cloud Run compatibility
     delete config.headers.host;
     delete config.headers['content-length'];
 
@@ -68,17 +70,18 @@ app.all('/api/patients*', async (req, res) => {
     res.status(response.status).json(response.data);
   } catch (error) {
     if (error.response) {
-      console.error(`[Proxy Error] ${error.response.status} from Patient Service`);
       return res.status(error.response.status).json(error.response.data);
     }
-    console.error(`[Proxy Error] Connection failed: ${error.message}`);
-    res.status(502).json({ error: "Bad Gateway", details: "Could not connect to Patient Service" });
+    res.status(502).json({ error: "Bad Gateway", details: "Patient Service unreachable" });
   }
-});
+};
 
-app.use('/api/diagnosis', diagnosisRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
+app.all(['/api/patients*', '/patients*'], handlePatientProxy);
+
+// 🛠️ Mount other routes at both prefixed and non-prefixed paths
+app.use(['/api/diagnosis', '/diagnosis'], diagnosisRoutes);
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/user', '/user'], userRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: "Backend Core API is running!" });
