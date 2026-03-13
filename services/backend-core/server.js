@@ -4,6 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const axios = require('axios');
 
 // --- MongoDB Connection ---
 if (process.env.NODE_ENV !== 'test') {
@@ -40,7 +41,40 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // 🛡️ Security: Restrict payload size to prevent DoS
-app.use(express.json({ limit: '1mb' })); 
+app.use(express.json({ limit: '10mb' })); // Increased for potential patient data transfers
+
+// 🏥 Proxy for Patient Service
+app.all('/api/patients*', async (req, res) => {
+  const PATIENT_SERVICE_URL = process.env.PATIENT_SERVICE_URL || 'http://patient-service:3001';
+  const targetPath = req.originalUrl;
+  
+  console.log(`[Proxy] Forwarding ${req.method} ${targetPath} to ${PATIENT_SERVICE_URL}`);
+  
+  try {
+    const config = {
+      method: req.method,
+      url: `${PATIENT_SERVICE_URL}${targetPath}`,
+      data: req.body,
+      headers: { 
+        ...req.headers,
+      }
+    };
+    
+    // Clean up host header for Cloud Run compatibility
+    delete config.headers.host;
+    delete config.headers['content-length'];
+
+    const response = await axios(config);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if (error.response) {
+      console.error(`[Proxy Error] ${error.response.status} from Patient Service`);
+      return res.status(error.response.status).json(error.response.data);
+    }
+    console.error(`[Proxy Error] Connection failed: ${error.message}`);
+    res.status(502).json({ error: "Bad Gateway", details: "Could not connect to Patient Service" });
+  }
+});
 
 app.use('/api/diagnosis', diagnosisRoutes);
 app.use('/api/auth', authRoutes);
