@@ -24,7 +24,9 @@ const app = express();
 app.set('trust proxy', 1);
 
 // 🛡️ Security Header: Using helmet to set security-related headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.disable('x-powered-by');
 
 // 🛡️ Security: CORS Protection
@@ -52,9 +54,13 @@ const handlePatientProxy = async (req, res) => {
     return res.status(502).json({ error: "Configuration Error", details: "PATIENT_SERVICE_URL is not set on server" });
   }
 
-  // Ensure target path has /api prefix for the patient-service
+  // Ensure target path is correct
   let targetPath = req.originalUrl;
-  if (!targetPath.startsWith('/api')) {
+  
+  // Logic: 
+  // 1. If it's a /patients request, ensure it has /api prefix for the service
+  // 2. If it's an /uploads request, keep it as is (don't add /api)
+  if (targetPath.includes('/patients') && !targetPath.startsWith('/api')) {
     targetPath = '/api' + targetPath;
   }
   

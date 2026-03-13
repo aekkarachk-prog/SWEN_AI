@@ -72,6 +72,22 @@ export default function DiagnosisPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // 🛠️ Helper สำหรับสร้าง API_URL
+  const getApiUrl = () => {
+    let url = process.env.NEXT_PUBLIC_API_URL || "";
+    if (!url || url === "") return "/api";
+    return url;
+  };
+
+  // 🛠️ Helper สำหรับสร้าง URL รูปภาพแบบเต็ม
+  const getFullImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('data:')) return path;
+    const baseUrl = getApiUrl().replace(/\/api$/, '');
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isDark = document.documentElement.classList.contains('dark');
     const file = e.target.files?.[0];
