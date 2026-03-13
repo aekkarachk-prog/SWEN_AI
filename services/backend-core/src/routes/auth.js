@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const { body, validationResult } = require('express-validator');
 
 // สำหรับการจำลอง JWT (ในระบบจริงควรใช้ jsonwebtoken)
 const generateMockToken = (user) => {
@@ -13,12 +14,16 @@ const generateMockToken = (user) => {
 };
 
 // 🛡️ Route: Login
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
-    return res.status(400).json({ error: 'Invalid input format' });
+router.post('/login', [
+  body('username').isString().trim().notEmpty().withMessage('Username is required'),
+  body('password').isString().notEmpty().withMessage('Password is required'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { username, password } = req.body;
 
   try {
     // 🛡️ Search real database

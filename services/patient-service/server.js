@@ -4,11 +4,22 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
-// 🛡️ Security: Hide Express framework information
+// 🛡️ Security: Secure HTTP headers with Helmet
+app.use(helmet());
 app.disable('x-powered-by');
+
+// 🛡️ Security: Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200, // Higher limit for internal/patient services
+  message: { error: 'Rate limit exceeded. Please try again later.' }
+});
+app.use('/api/', limiter);
 
 app.use(cors());
 // 🛡️ Security: Limit body size to prevent DoS attacks
