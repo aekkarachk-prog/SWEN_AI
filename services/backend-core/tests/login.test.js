@@ -1,5 +1,39 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../server'); 
+const User = require('../src/models/User');
+
+let mongoServer;
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const uri = mongoServer.getUri();
+  await mongoose.connect(uri);
+
+  // Seed Mock Users for Testing
+  await User.create([
+    {
+      username: 'doctor_somchai',
+      password: 'password123',
+      name: 'นพ. สมชาย ใจดี',
+      role: 'DOCTOR',
+      email: 'somchai@mdkku.com'
+    },
+    {
+      username: 'nurse_somsri',
+      password: 'password123',
+      name: 'พว. สมศรี มีสุข',
+      role: 'NURSE',
+      email: 'somsri@mdkku.com'
+    }
+  ]);
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
 
 describe('Auth & User API - Test Cases', () => {
   let userToken = '';

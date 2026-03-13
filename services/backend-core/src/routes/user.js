@@ -105,4 +105,15 @@ router.delete('/:id', authenticateUser, isAdmin, async (req, res) => {
   }
 });
 
+// 6. ดึงข้อมูลผู้ใช้จากชื่อบัญชี (Public/Common lookup for tests/UI)
+router.get('/account/:username', async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username.toLowerCase() }, '-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: 'Lookup failed' });
+  }
+});
+
 module.exports = router;
