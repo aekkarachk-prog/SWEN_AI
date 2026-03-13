@@ -17,6 +17,9 @@ const userRoutes = require('./src/routes/user');
 
 const app = express();
 
+// 🛡️ Security: Trust proxy (Nginx)
+app.set('trust proxy', 1);
+
 // 🛡️ Security Header: Using helmet to set security-related headers
 app.use(helmet());
 app.disable('x-powered-by');

@@ -192,8 +192,8 @@ export default function DashboardPage() {
       {/* --- SIDEBAR --- */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-sm">
         <div className="p-6">
-          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : <Activity size={24} />} {userName}
+          <h1 className={`text-xl font-bold flex items-center gap-2 ${userRole === 'DOCTOR' || userRole === 'ADMIN' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {userRole === 'DOCTOR' ? <Stethoscope size={24} /> : userRole === 'ADMIN' ? <Shield size={24} /> : <Activity size={24} />} {userName}
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
@@ -418,8 +418,10 @@ export default function DashboardPage() {
                             <td className="px-6 py-4">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${
                                 activity.status === 'Non Demented' || activity.status === 'Registration' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                                activity.status === 'Very Mild Demented' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' :
+                                activity.status === 'Mild Demented' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
                                 activity.status === 'Moderate Demented' ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400' :
-                                'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-400'
                               }`}>
                                 {activity.alert && <AlertCircle className="w-3 h-3" />}
                                 {activity.status}

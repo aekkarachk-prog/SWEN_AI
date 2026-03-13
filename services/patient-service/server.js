@@ -9,6 +9,9 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// 🛡️ Security: Trust proxy (Nginx)
+app.set('trust proxy', 1);
+
 // 🛡️ Security: Secure HTTP headers with Helmet
 app.use(helmet());
 app.disable('x-powered-by');
@@ -152,6 +155,9 @@ app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
 
     const imageUrl = `/uploads/${req.file.filename}`;
     
+    // 🛡️ Logic: Only set profile_pic if it doesn't exist yet
+    const existingPatient = await Patient.findOne({ id_card: id_card });
+    
     const updateData = {
       $push: { history: { 
         diagnosis, 
@@ -159,21 +165,19 @@ app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
         notes, 
         image_url: imageUrl,
         date: new Date(),
-        duration: duration // 🕒 บันทึก duration ลงใน history
-      } },
-      $setOnInsert: { 
-        name,
-        created_at: new Date()
-      }
+        duration: duration 
+      } }
     };
 
-    const existingPatient = await Patient.findOne({ id_card: id_card });
     if (!existingPatient || !existingPatient.profile_pic) {
-      if (updateData.$setOnInsert) {
-        updateData.$setOnInsert.profile_pic = imageUrl;
-      } else {
-        updateData.$set = { profile_pic: imageUrl };
-      }
+      updateData.$set = { profile_pic: imageUrl };
+    }
+
+    if (!existingPatient) {
+      updateData.$setOnInsert = { 
+        name,
+        created_at: new Date()
+      };
     }
 
     const patient = await Patient.findOneAndUpdate(
@@ -321,17 +325,21 @@ app.get('/api/patients/analytics/summary', async (req, res) => {
 
       p.history.forEach(h => {
         const hDate = new Date(h.date);
-        const isDiagnostic = h.diagnosis && h.diagnosis !== 'Initial' && h.diagnosis !== 'AI Analysis';
+        const isInitial = h.diagnosis === 'Initial';
+        const isDiagnostic = h.diagnosis && !isInitial && h.diagnosis !== 'AI Analysis';
 
         if (hDate >= today) {
-          scansToday++;
+          if (!isInitial) {
+            scansToday++; // 🛡️ Only count actual scans/analysis, not initial registrations
+          }
           if (isDiagnostic) {
             analyzedToday++;
             if (h.notes && !h.notes.startsWith('AI Confidence:')) {
               humanReviewedToday++;
             }
           }
-        } else if (hDate >= yesterday && hDate < today) {
+        }
+ else if (hDate >= yesterday && hDate < today) {
           scansYesterday++;
         }
 
