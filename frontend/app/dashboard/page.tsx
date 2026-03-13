@@ -281,10 +281,10 @@ export default function DashboardPage() {
               <>
                 {/* KPI Cards */}
                 <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <KPICard title="ผู้ป่วยทั้งหมด" value={data.kpi.totalPatients.toLocaleString()} icon={<Users />} trend={data.kpi.patientTrend} color="blue" />
-                  <KPICard title="MRI สแกนวันนี้" value={data.kpi?.scansToday?.toString() || "0"} icon={<Clock />} trend={data.kpi?.scanTrend} color="amber" />
-                  <KPICard title="วิเคราะห์สำเร็จ (วันนี้)" value={data.kpi?.analyzedToday?.toString() || "0"} icon={<Brain />} trend={data.kpi?.analyzedTrend} color="emerald" />
-                  <KPICard title="ความแม่นยำเฉลี่ย" value={data.kpi.accuracy} icon={<UserCheck />} trend="+0.2" color="indigo" />
+                  <KPICard title="ผู้ป่วยทั้งหมด" value={data.kpi?.totalPatients?.toLocaleString() || "0"} icon={<Users />} trend={data.kpi?.patientTrend || "+0"} color="blue" />
+                  <KPICard title="MRI สแกนวันนี้" value={data.kpi?.scansToday?.toString() || "0"} icon={<Clock />} trend={data.kpi?.scanTrend || "+0"} color="amber" />
+                  <KPICard title="วิเคราะห์สำเร็จ (วันนี้)" value={data.kpi?.analyzedToday?.toString() || "0"} icon={<Brain />} trend={data.kpi?.analyzedTrend || "+0"} color="emerald" />
+                  <KPICard title="ความแม่นยำเฉลี่ย" value={data.kpi?.accuracy || "0%"} icon={<UserCheck />} trend={data.kpi?.accuracyTrend || "+0.0"} color="indigo" />
                 </section>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

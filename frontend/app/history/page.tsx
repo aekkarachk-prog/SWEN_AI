@@ -322,14 +322,14 @@ function HistoryContent() {
         <div class="space-y-4 max-h-[600px] overflow-y-auto p-4 text-left">
           ${patientData.history.map((h: any, index: number) => `
             <div class="flex gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 items-start">
-              <div className="w-32 h-32 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-700 overflow-hidden flex-shrink-0">
-                <img src={getFullImageUrl(h.image_url)} className="w-full h-full object-cover" />
+              <div class="w-32 h-32 bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-700 overflow-hidden flex-shrink-0">
+                <img src="${getFullImageUrl(h.image_url)}" class="w-full h-full object-cover" />
               </div>
 
               <div class="flex-1">
                 <div class="flex justify-between items-start mb-2">
                   <span class="text-[10px] font-bold text-blue-500 uppercase">ครั้งที่ ${index + 1}</span>
-                  <span class="text-[10px] text-slate-400 font-mono">${new Date(h.date).toLocaleString()}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${new Date(h.date || Date.now()).toLocaleString()}</span>
                 </div>
                 <p class="text-lg font-bold text-slate-800 dark:text-white mb-1">${h.diagnosis}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">${h.notes || 'ไม่มีหมายเหตุ'}</p>
