@@ -13,7 +13,9 @@ const app = express();
 app.set('trust proxy', 1);
 
 // 🛡️ Security: Secure HTTP headers with Helmet
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.disable('x-powered-by');
 
 // 🛡️ Security: Rate Limiting
