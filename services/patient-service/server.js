@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const helmet = require('helmet');
 const { Storage } = require('@google-cloud/storage');
 
@@ -11,11 +10,14 @@ const app = express();
 
 // 🌩️ Google Cloud Storage Setup
 const BUCKET_NAME = process.env.GCS_BUCKET_NAME;
+if (!BUCKET_NAME) {
+  console.error("❌ FATAL: GCS_BUCKET_NAME environment variable is missing!");
+}
 const storageGCS = new Storage();
 
 // 🛡️ Helper for GCS Upload (Mandatory)
 const uploadToGCS = (file) => new Promise((resolve, reject) => {
-  if (!BUCKET_NAME) return reject(new Error("GCS_BUCKET_NAME environment variable is missing"));
+  if (!BUCKET_NAME) return reject(new Error("GCS_BUCKET_NAME is missing"));
   if (!file) return resolve(null);
   
   const bucket = storageGCS.bucket(BUCKET_NAME);
@@ -45,15 +47,29 @@ app.get('/api/patients/health', (req, res) => {
   res.json({ status: "ok", bucket: BUCKET_NAME || "NOT_CONFIGURED" });
 });
 
-// Serve Images from GCS
+// 🖼️ Serve Images STRICTLY from GCS with correct Content-Type
 app.get('/uploads/:filename', async (req, res) => {
   if (!BUCKET_NAME) return res.status(500).json({ error: "GCS not configured" });
   
   const fileName = req.params.filename;
+  const ext = path.extname(fileName).toLowerCase();
+  
+  // Mapping extension to Content-Type to prevent ORB errors
+  const mimeTypes = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif'
+  };
+
   try {
     const file = storageGCS.bucket(BUCKET_NAME).file(fileName);
     const [exists] = await file.exists();
+    
     if (exists) {
+      // 🚀 CRITICAL: Set the correct Content-Type header
+      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
       file.createReadStream().pipe(res);
     } else {
       res.status(404).json({ error: "File not found in GCS" });
@@ -87,10 +103,10 @@ const Patient = mongoose.model('Patient', new mongoose.Schema({
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- Routes ---
+// --- API Routes ---
 
 app.get('/api/patients', async (req, res) => {
-  res.json(await Patient.find());
+  try { res.json(await Patient.find()); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/patients', async (req, res) => {
@@ -106,8 +122,6 @@ app.post('/api/patients', async (req, res) => {
 app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) throw new Error("No image file received");
-    
-    // 🚀 Force GCS Upload
     const imageUrl = await uploadToGCS(req.file);
     
     const probability = parseFloat(req.body.probability) || 0;
@@ -135,7 +149,6 @@ app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
 
     res.json({ message: "Success", patient, imageUrl });
   } catch (error) {
-    console.error("Upload Error:", error);
     res.status(500).json({ error: 'Upload Failed', details: error.message });
   }
 });
@@ -143,6 +156,20 @@ app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
 app.get('/api/patients/:id', async (req, res) => {
   const p = await Patient.findOne({ id_card: req.params.id });
   p ? res.json(p) : res.status(404).json({ error: "Not found" });
+});
+
+// 📊 Analytics Summary
+app.get('/api/patients/analytics/summary', async (req, res) => {
+  try {
+    const patients = await Patient.find();
+    res.json({
+      kpi: { totalPatients: patients.length, scansToday: 0, accuracy: "0%" },
+      predictionData: [],
+      recentActivities: []
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Analytics Error' });
+  }
 });
 
 app.delete('/api/patients/:id', async (req, res) => {
