@@ -307,8 +307,8 @@ export default function DiagnosisPage() {
       }
 
       uploadData.append("diagnosis", result.prediction);
-      uploadData.append("notes", `AI Confidence: ${confidence.toFixed(2)}%`);
-      uploadData.append("probability", ((confidence || 0) / 100).toString());
+      uploadData.append("notes", `AI Confidence: ${(confidence || 0).toFixed(2)}%`);
+      uploadData.append("probability", (((confidence || 0) / 100)).toString());
       if (result?.duration) {
         uploadData.append("duration", result.duration?.toString() || "0");
       }
