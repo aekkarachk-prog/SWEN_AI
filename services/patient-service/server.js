@@ -3,22 +3,24 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const { Storage } = require('@google-cloud/storage');
 
 const app = express();
 
 // 🌩️ Google Cloud Storage Setup
+const BUCKET_NAME = process.env.GCS_BUCKET_NAME;
+if (!BUCKET_NAME) {
+  console.error("❌ FATAL: GCS_BUCKET_NAME environment variable is missing!");
+}
 const storageGCS = new Storage();
-const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'alzheimer-patient-images';
-const bucket = storageGCS.bucket(BUCKET_NAME);
 
-// 🛡️ Helper for GCS Upload
+// 🛡️ Helper for GCS Upload (Mandatory)
 const uploadToGCS = (file) => new Promise((resolve, reject) => {
-  if (!file) resolve(null);
+  if (!BUCKET_NAME) return reject(new Error("GCS_BUCKET_NAME is missing"));
+  if (!file) return resolve(null);
   
+  const bucket = storageGCS.bucket(BUCKET_NAME);
   const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
   const blobName = uniqueSuffix + path.extname(file.originalname);
   const blob = bucket.file(blobName);
@@ -26,92 +28,62 @@ const uploadToGCS = (file) => new Promise((resolve, reject) => {
   const blobStream = blob.createWriteStream({
     resumable: false,
     gzip: true,
-    metadata: {
-      contentType: file.mimetype,
-    }
+    metadata: { contentType: file.mimetype }
   });
 
   blobStream.on('error', (err) => reject(err));
-  blobStream.on('finish', () => {
-    resolve(`/uploads/${blobName}`);
-  });
-
+  blobStream.on('finish', () => resolve(`/uploads/${blobName}`));
   blobStream.end(file.buffer);
 });
 
-// 🛡️ Helper for GCS Delete
-const deleteFromGCS = async (imageUrl) => {
-  if (!imageUrl || !imageUrl.startsWith('/uploads/')) return;
-  try {
-    const fileName = path.basename(imageUrl);
-    await bucket.file(fileName).delete();
-    console.log(`[GCS] Deleted ${fileName}`);
-  } catch (err) {
-    console.error(`[GCS Error] Failed to delete ${imageUrl}:`, err.message);
-  }
-};
-
-// 🛡️ Security: Trust proxy (Nginx/Cloud Run)
 app.set('trust proxy', 1);
-
-// 🛡️ Security: Secure HTTP headers with Helmet (Allow Cross-Origin for Vercel)
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.disable('x-powered-by');
-
-// 🛡️ Security: Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { error: 'Rate limit exceeded. Please try again later.' }
-});
-app.use('/api/', limiter);
-
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); 
+app.use(express.json({ limit: '10mb' }));
 
-// Request Logger
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
+// Health Check
+app.get('/api/patients/health', (req, res) => {
+  res.json({ status: "ok", bucket: BUCKET_NAME || "NOT_CONFIGURED" });
 });
 
-const PORT = process.env.PORT || 8080; // Cloud Run uses 8080
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/alzheimer_db';
-
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)){
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// 🛡️ Route for serving images (Local fallback then GCS)
+// 🖼️ Serve Images STRICTLY from GCS with correct Content-Type
 app.get('/uploads/:filename', async (req, res) => {
+  if (!BUCKET_NAME) return res.status(500).json({ error: "GCS not configured" });
+  
   const fileName = req.params.filename;
-  const localPath = path.join(uploadsDir, fileName);
-
-  if (fs.existsSync(localPath)) {
-    return res.sendFile(localPath);
-  }
+  const ext = path.extname(fileName).toLowerCase();
+  
+  // Mapping extension to Content-Type to prevent ORB errors
+  const mimeTypes = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif'
+  };
 
   try {
-    const file = bucket.file(fileName);
+    const file = storageGCS.bucket(BUCKET_NAME).file(fileName);
     const [exists] = await file.exists();
+    
     if (exists) {
+      // 🚀 CRITICAL: Set the correct Content-Type header
+      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
       file.createReadStream().pipe(res);
     } else {
-      res.status(404).send('Not Found');
+      res.status(404).json({ error: "File not found in GCS" });
     }
   } catch (err) {
-    res.status(500).send('Internal Error');
+    res.status(500).json({ error: "GCS Retrieval Error", details: err.message });
   }
 });
 
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB (Patient Service)'))
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+// Database
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/alzheimer_db';
+mongoose.connect(MONGODB_URI).catch(err => console.error('❌ MongoDB Error:', err));
 
-const patientSchema = new mongoose.Schema({
+const Patient = mongoose.model('Patient', new mongoose.Schema({
   id_card: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   age: Number,
@@ -127,185 +99,82 @@ const patientSchema = new mongoose.Schema({
     duration: Number
   }],
   created_at: { type: Date, default: Date.now }
-});
+}));
 
-const Patient = mongoose.model('Patient', patientSchema);
-
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|webp/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    if (mimetype && extname) return cb(null, true);
-    cb(new Error("Invalid file type. Only images are allowed."));
-  }
-});
+const upload = multer({ storage: multer.memoryStorage() });
 
 // --- API Routes ---
 
-app.get('/api/patients/health', (req, res) => {
-  res.json({ status: "ok", service: "patient-service" });
-});
-
 app.get('/api/patients', async (req, res) => {
-  try {
-    const patients = await Patient.find();
-    res.json(patients);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+  try { res.json(await Patient.find()); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/patients', async (req, res) => {
   try {
-    const { id_card, name, age, gender, general_notes } = req.body;
-    if (!id_card || !name) return res.status(400).json({ error: 'Missing fields' });
-
-    const patient = new Patient({
-      id_card: String(id_card),
-      name: String(name),
-      age: age ? Number(age) : undefined,
-      gender: gender ? String(gender) : undefined,
-      general_notes: general_notes ? String(general_notes) : undefined
-    });
-
+    const patient = new Patient(req.body);
     await patient.save();
     res.status(201).json(patient);
-  } catch (error) {
-    res.status(400).json({ error: 'Bad Request or Duplicate ID' });
+  } catch (e) {
+    res.status(400).json({ error: "Creation failed", details: e.message });
   }
 });
 
 app.post('/api/patients/upload', upload.single('image'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No image' });
-
-    const id_card = String(req.body.id_card);
-    const diagnosis = String(req.body.diagnosis || 'AI Analysis');
-    const notes = String(req.body.notes || '');
-    const name = String(req.body.name || 'New Patient');
+    if (!req.file) throw new Error("No image file received");
+    const imageUrl = await uploadToGCS(req.file);
+    
     const probability = parseFloat(req.body.probability) || 0;
     const duration = parseFloat(req.body.duration) || 0;
 
-    const imageUrl = await uploadToGCS(req.file);
-    
-    const existingPatient = await Patient.findOne({ id_card: id_card });
     const updateData = {
-      $push: { history: { diagnosis, probability, notes, image_url: imageUrl, date: new Date(), duration } }
+      $push: { history: { 
+        diagnosis: req.body.diagnosis || 'Initial', 
+        probability, 
+        notes: req.body.notes || '', 
+        image_url: imageUrl, 
+        duration 
+      } }
     };
 
-    if (!existingPatient || !existingPatient.profile_pic) {
-      updateData.$set = { profile_pic: imageUrl };
-    }
-
-    if (!existingPatient) {
-      updateData.$setOnInsert = { name, created_at: new Date() };
-    }
+    const existing = await Patient.findOne({ id_card: req.body.id_card });
+    if (!existing || !existing.profile_pic) updateData.$set = { profile_pic: imageUrl };
+    if (!existing) updateData.$setOnInsert = { name: req.body.name, created_at: new Date() };
 
     const patient = await Patient.findOneAndUpdate(
-      { id_card: id_card },
+      { id_card: req.body.id_card },
       updateData,
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { new: true, upsert: true }
     );
 
     res.json({ message: "Success", patient, imageUrl });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error during upload' });
+    res.status(500).json({ error: 'Upload Failed', details: error.message });
   }
 });
 
-app.get('/api/patients/:id_card', async (req, res) => {
-  try {
-    const patient = await Patient.findOne({ id_card: String(req.params.id_card) });
-    if (!patient) return res.status(404).json({ error: 'Not found' });
-    res.json(patient);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+app.get('/api/patients/:id', async (req, res) => {
+  const p = await Patient.findOne({ id_card: req.params.id });
+  p ? res.json(p) : res.status(404).json({ error: "Not found" });
 });
 
-app.put('/api/patients/:id_card', async (req, res) => {
-  try {
-    const updateData = {};
-    if (req.body.name) updateData.name = String(req.body.name);
-    if (req.body.age) updateData.age = Number(req.body.age);
-    if (req.body.gender) updateData.gender = String(req.body.gender);
-    if (req.body.general_notes) updateData.general_notes = String(req.body.general_notes);
-
-    const patient = await Patient.findOneAndUpdate(
-      { id_card: String(req.params.id_card) },
-      { $set: updateData },
-      { new: true }
-    );
-    res.json(patient);
-  } catch (error) {
-    res.status(400).json({ error: 'Bad Request' });
-  }
-});
-
-app.delete('/api/patients/:id_card', async (req, res) => {
-  try {
-    const patient = await Patient.findOneAndDelete({ id_card: String(req.params.id_card) });
-    if (!patient) return res.status(404).json({ error: 'Not found' });
-
-    if (patient.history) {
-      for (const h of patient.history) {
-        if (h.image_url) {
-          const fileName = path.basename(h.image_url);
-          const localPath = path.join(uploadsDir, fileName);
-          if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
-          await deleteFromGCS(h.image_url);
-        }
-      }
-    }
-    res.json({ message: 'Deleted' });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-app.post('/api/patients/:id_card/clear-history', async (req, res) => {
-  try {
-    const patient = await Patient.findOne({ id_card: String(req.params.id_card) });
-    if (!patient) return res.status(404).json({ error: 'Not found' });
-
-    const initialRecords = patient.history.filter(h => h.diagnosis === "Initial");
-    const toDelete = patient.history.filter(h => h.diagnosis !== "Initial");
-
-    for (const h of toDelete) {
-      if (h.image_url) {
-        const fileName = path.basename(h.image_url);
-        const localPath = path.join(uploadsDir, fileName);
-        if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
-        await deleteFromGCS(h.image_url);
-      }
-    }
-
-    patient.history = initialRecords;
-    await patient.save();
-    res.json({ message: 'Cleared', patient });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
+// 📊 Analytics Summary
 app.get('/api/patients/analytics/summary', async (req, res) => {
   try {
     const patients = await Patient.find();
-    // Simplified analytics for speed, add more logic as needed
-    res.json({ kpi: { totalPatients: patients.length }, recentActivities: [] });
+    res.json({
+      kpi: { totalPatients: patients.length, scansToday: 0, accuracy: "0%" },
+      predictionData: [],
+      recentActivities: []
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Error' });
+    res.status(500).json({ error: 'Analytics Error' });
   }
 });
 
-app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  res.status(500).json({ error: "Internal Server Error" });
+app.delete('/api/patients/:id', async (req, res) => {
+  await Patient.findOneAndDelete({ id_card: req.params.id });
+  res.json({ message: "Deleted" });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Patient Service on port ${PORT}`);
-});
+app.listen(8080, '0.0.0.0', () => console.log(`Patient Service online on 8080`));
