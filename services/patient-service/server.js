@@ -54,7 +54,7 @@ app.get('/uploads/:filename', async (req, res) => {
   const fileName = req.params.filename;
   const ext = path.extname(fileName).toLowerCase();
   
-  // Mapping extension to Content-Type to prevent ORB errors
+  // Mapping extension to Content-Type to prevent ORB errors1
   const mimeTypes = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
